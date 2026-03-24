@@ -1,0 +1,41 @@
+<script setup>
+import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { api } from '../services/api'
+import { setAuth } from '../stores/auth'
+
+const router = useRouter()
+const loading = ref(false)
+const error = ref('')
+
+const form = reactive({
+  email: '',
+  password: '',
+})
+
+const onSubmit = async () => {
+  loading.value = true
+  error.value = ''
+  try {
+    const data = await api.login(form)
+    setAuth(data)
+    router.push('/')
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+</script>
+
+<template>
+  <section class="card" style="max-width: 420px; margin: 0 auto">
+    <h2>Iniciar sesión</h2>
+    <form @submit.prevent="onSubmit">
+      <input v-model="form.email" placeholder="Correo" type="email" required />
+      <input v-model="form.password" placeholder="Password" type="password" required />
+      <button :disabled="loading">{{ loading ? 'Entrando...' : 'Entrar' }}</button>
+    </form>
+    <p class="error" v-if="error">{{ error }}</p>
+  </section>
+</template>

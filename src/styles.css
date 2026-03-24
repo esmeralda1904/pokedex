@@ -1,0 +1,257 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, Arial, sans-serif;
+  --aqua-bg: #e6fbff;
+  --aqua-soft: #b7f4ff;
+  --blue-main: #0d6efd;
+  --blue-dark: #0b4fc0;
+  --green-main: #16a34a;
+  --green-soft: #d1fae5;
+  --white: #ffffff;
+  --text-main: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, var(--aqua-bg) 0%, #f8feff 55%, var(--white) 100%);
+  color: var(--text-main);
+}
+
+.layout {
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #8fe9ff;
+  background: linear-gradient(90deg, #12c2e9 0%, #09d2b8 100%);
+  position: sticky;
+  top: 0;
+}
+
+.topbar h1 {
+  color: var(--white);
+}
+
+.topbar nav {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.topbar a {
+  text-decoration: none;
+  color: var(--white);
+  font-weight: 600;
+  padding: 0.25rem 0.45rem;
+  border-radius: 6px;
+}
+
+.topbar a.router-link-active {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.container {
+  max-width: 1100px;
+  margin: 1.2rem auto;
+  padding: 0 1rem 1.5rem;
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid #9fe6ff;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 8px 20px rgba(13, 110, 253, 0.08);
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid-3 {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.grid-2 {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+input,
+select,
+textarea,
+button {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #9bdaf9;
+  font-size: 0.95rem;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #8ae7ff;
+  border-color: #47b8f7;
+}
+
+button {
+  cursor: pointer;
+  background: var(--blue-main);
+  color: var(--white);
+  border: 0;
+}
+
+button:hover {
+  background: var(--blue-dark);
+}
+
+button.secondary {
+  background: #12a8d8;
+}
+
+button.danger {
+  background: #d14343;
+}
+
+.error {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.ok {
+  color: var(--green-main);
+  font-weight: 600;
+}
+
+.inline {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.pokemon-img {
+  width: 100%;
+  max-width: 180px;
+  margin: 0 auto;
+  display: block;
+}
+
+.muted {
+  color: #64748b;
+}
+
+.star-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid #7fcdf5;
+  background: var(--white);
+  color: #5a6e8a;
+  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.star-btn:hover {
+  background: #e7f4ff;
+}
+
+.star-btn.active {
+  background: var(--blue-main);
+  color: var(--white);
+  border-color: var(--blue-main);
+}
+
+.star-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.favorite-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.favorite-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: #0b6b31;
+  font-weight: 600;
+}
+
+.favorites-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.favorite-card {
+  padding: 0.75rem;
+}
+
+.favorite-card h3 {
+  font-size: 1rem;
+  margin: 0 0 0.25rem;
+}
+
+.favorite-image {
+  width: 74px;
+  height: 74px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 0.35rem;
+}
+
+.favorite-card p {
+  margin: 0.15rem 0;
+}
+
+.favorite-card .grid {
+  gap: 0.5rem;
+}
+
+.favorite-card input,
+.favorite-card textarea,
+.favorite-card button {
+  font-size: 0.85rem;
+  padding: 0.45rem 0.55rem;
+}
+
+.list-pokemon-image {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  display: block;
+  margin: 0.2rem auto 0.45rem;
+}
+
+.team-pokemon-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.team-pokemon-image {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
