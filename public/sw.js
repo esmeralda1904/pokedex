@@ -264,12 +264,14 @@ self.addEventListener('fetch', (event) => {
 });
 
 const networkWithOfflineQueue = async (request) => {
+  const requestForQueue = request.clone();
+
   try {
     return await fetch(request);
   } catch (error) {
     console.log('[SW] Write request failed; queueing for sync', error);
 
-    await queueFailedRequest(request);
+    await queueFailedRequest(requestForQueue);
     await registerSyncTask();
     await notifyClients({ type: 'SYNC_QUEUED' });
 
