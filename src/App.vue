@@ -41,6 +41,16 @@ const handleServiceWorkerMessage = (event) => {
   if (message?.type === 'SYNC_COMPLETED') {
     showSyncBanner(`Sincronización completada: ${message.syncedCount} petición(es) enviadas.`)
   }
+
+  if (message?.type === 'PUSH_RECEIVED') {
+    const pushPayload = message.payload || {}
+    showSyncBanner(pushPayload.body || 'Tienes una nueva notificación.', 4500)
+    window.dispatchEvent(
+      new CustomEvent('app-push-received', {
+        detail: pushPayload,
+      })
+    )
+  }
 }
 
 const urlBase64ToUint8Array = (base64String) => {

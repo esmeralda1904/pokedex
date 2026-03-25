@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, onBeforeUnmount, reactive, ref } from 'vue'
 import { api } from '../services/api'
 
 const friends = ref([])
@@ -8,6 +8,7 @@ const enemyTeams = ref([])
 const battles = ref([])
 const error = ref('')
 const ok = ref('')
+let refreshInterval = null
 
 const form = reactive({
   friendId: '',
@@ -75,7 +76,24 @@ const createBattle = async () => {
   }
 }
 
-onMounted(loadData)
+const handlePushRefresh = () => {
+  loadData()
+}
+
+onMounted(() => {
+  loadData()
+  window.addEventListener('app-push-received', handlePushRefresh)
+  refreshInterval = window.setInterval(loadData, 12000)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('app-push-received', handlePushRefresh)
+
+  if (refreshInterval) {
+    window.clearInterval(refreshInterval)
+    refreshInterval = null
+  }
+})
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { api } from '../services/api'
 
 const friends = ref([])
@@ -8,6 +8,7 @@ const outgoingRequests = ref([])
 const friendCode = ref('')
 const error = ref('')
 const ok = ref('')
+let refreshInterval = null
 
 const load = async () => {
   error.value = ''
@@ -77,7 +78,24 @@ const deleteFriend = async (friendId) => {
   }
 }
 
-onMounted(load)
+const handlePushRefresh = () => {
+  load()
+}
+
+onMounted(() => {
+  load()
+  window.addEventListener('app-push-received', handlePushRefresh)
+  refreshInterval = window.setInterval(load, 12000)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('app-push-received', handlePushRefresh)
+
+  if (refreshInterval) {
+    window.clearInterval(refreshInterval)
+    refreshInterval = null
+  }
+})
 </script>
 
 <template>
@@ -97,8 +115,8 @@ onMounted(load)
       <h3>{{ request.email }}</h3>
       <p>Código: {{ request.friendCode }}</p>
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
-        <button @click="acceptRequest(request._id)">Aceptar</button>
-        <button class="danger" @click="rejectRequest(request._id)">Eliminar</button>
+        <button class="friend-action-btn" @click="acceptRequest(request._id)">Aceptar</button>
+        <button class="danger friend-action-btn" @click="rejectRequest(request._id)">Eliminar</button>
       </div>
     </article>
   </section>
@@ -117,7 +135,17 @@ onMounted(load)
       <h3>{{ friend.email }}</h3>
       <p>Código: {{ friend.friendCode }}</p>
       <p class="muted">ID: {{ friend._id }}</p>
-      <button class="danger" @click="deleteFriend(friend._id)">Eliminar amiga</button>
+      <button class="danger friend-action-btn" @click="deleteFriend(friend._id)">Eliminar amiga</button>
     </article>
   </section>
 </template>
+
+<style scoped>
+@media (max-width: 640px) {
+  .friend-action-btn {
+    font-size: 0.82rem;
+    padding: 0.4rem 0.6rem;
+    min-height: 34px;
+  }
+}
+</style>
