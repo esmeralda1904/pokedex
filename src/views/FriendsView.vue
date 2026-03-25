@@ -65,6 +65,19 @@ const rejectRequest = async (requesterId) => {
   }
 }
 
+const cancelOutgoingRequest = async (targetUserId) => {
+  error.value = ''
+  ok.value = ''
+
+  try {
+    const response = await api.rejectFriendRequest(targetUserId)
+    ok.value = response.message || 'Solicitud cancelada'
+    await load()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
 const deleteFriend = async (friendId) => {
   error.value = ''
   ok.value = ''
@@ -127,6 +140,9 @@ onBeforeUnmount(() => {
       <h3>{{ request.email }}</h3>
       <p>Código: {{ request.friendCode }}</p>
       <p class="muted">Pendiente de aceptación</p>
+      <button class="secondary friend-action-btn" @click="cancelOutgoingRequest(request._id)">
+        Cancelar solicitud
+      </button>
     </article>
   </section>
 
