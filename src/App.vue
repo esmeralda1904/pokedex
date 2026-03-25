@@ -8,6 +8,7 @@ const router = useRouter()
 const isAuth = computed(() => Boolean(authState.token))
 const syncBanner = ref('')
 let syncBannerTimeout = null
+let waitingPermissionInteraction = false
 
 const closeSession = () => {
   logout()
@@ -101,14 +102,39 @@ const setupPushSubscription = async () => {
       return
     }
 
+    const existingRegistration = await navigator.serviceWorker.getRegistration()
+    if (!existingRegistration) {
+      return
+    }
+
     const registration = await navigator.serviceWorker.ready
     let subscription = await registration.pushManager.getSubscription()
 
     if (!subscription) {
-      const permission =
-        Notification.permission === 'granted'
-          ? 'granted'
-          : await Notification.requestPermission()
+      const permission = Notification.permission
+
+      if (permission === 'default') {
+        if (!waitingPermissionInteraction) {
+          waitingPermissionInteraction = true
+          showSyncBanner('Toca la pantalla y acepta permisos para activar notificaciones push.', 6000)
+
+          const askOnInteraction = async () => {
+            window.removeEventListener('click', askOnInteraction)
+            window.removeEventListener('touchstart', askOnInteraction)
+            waitingPermissionInteraction = false
+
+            const nextPermission = await Notification.requestPermission()
+            if (nextPermission === 'granted') {
+              await setupPushSubscription()
+            }
+          }
+
+          window.addEventListener('click', askOnInteraction, { once: true })
+          window.addEventListener('touchstart', askOnInteraction, { once: true })
+        }
+
+        return
+      }
 
       if (permission !== 'granted') {
         return

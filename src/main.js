@@ -3,7 +3,7 @@ import App from './App.vue'
 import router from './router'
 import './styles.css'
 
-const enableSwInDev = import.meta.env.VITE_ENABLE_SW_DEV === 'true'
+const enableSwInDev = import.meta.env.VITE_ENABLE_SW_DEV !== 'false'
 const resetSwInDev = import.meta.env.VITE_RESET_SW_DEV === 'true'
 
 const clearDevServiceWorkers = async () => {
