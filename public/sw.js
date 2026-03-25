@@ -22,6 +22,7 @@ const APP_SHELL = [
 
 const isApiRequest = (url) => url.includes('/api/');
 const isWriteMethod = (method) => WRITE_METHODS.has(method.toUpperCase());
+const isNavigatorOffline = () => self.navigator?.onLine === false;
 
 const openOfflineDb = () => {
   return new Promise((resolve, reject) => {
@@ -269,6 +270,25 @@ const networkWithOfflineQueue = async (request) => {
   try {
     return await fetch(request);
   } catch (error) {
+    if (!isNavigatorOffline()) {
+      console.log('[SW] Write request failed while online; skipping queue', error);
+
+      return new Response(
+        JSON.stringify({
+          queued: false,
+          offline: false,
+          message: 'No se pudo completar la petición. Revisa CORS o disponibilidad del servidor.',
+        }),
+        {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: new Headers({
+            'Content-Type': 'application/json',
+          }),
+        }
+      );
+    }
+
     console.log('[SW] Write request failed; queueing for sync', error);
 
     await queueFailedRequest(requestForQueue);
