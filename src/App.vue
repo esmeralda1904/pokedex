@@ -1,21 +1,128 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { authState, logout } from './stores/auth'
+import { api } from './services/api'
 
 const router = useRouter()
 const isAuth = computed(() => Boolean(authState.token))
+const syncBanner = ref('')
+let syncBannerTimeout = null
 
 const closeSession = () => {
   logout()
   router.push('/login')
 }
+
+const showSyncBanner = (message, timeout = 4000) => {
+  syncBanner.value = message
+
+  if (syncBannerTimeout) {
+    window.clearTimeout(syncBannerTimeout)
+  }
+
+  syncBannerTimeout = window.setTimeout(() => {
+    syncBanner.value = ''
+    syncBannerTimeout = null
+  }, timeout)
+}
+
+const handleQueuedNotice = () => {
+  showSyncBanner('Sin internet: tu acción quedó pendiente y se enviará automáticamente.', 5000)
+}
+
+const handleServiceWorkerMessage = (event) => {
+  const message = event.data
+
+  if (message?.type === 'SYNC_QUEUED') {
+    showSyncBanner('Sin internet: tu acción quedó pendiente y se enviará automáticamente.', 5000)
+  }
+
+  if (message?.type === 'SYNC_COMPLETED') {
+    showSyncBanner(`Sincronización completada: ${message.syncedCount} petición(es) enviadas.`)
+  }
+}
+
+const urlBase64ToUint8Array = (base64String) => {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = window.atob(base64)
+  const outputArray = new Uint8Array(rawData.length)
+
+  for (let i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i)
+  }
+
+  return outputArray
+}
+
+const setupPushSubscription = async () => {
+  try {
+    if (!authState.token || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return
+    }
+
+    const registration = await navigator.serviceWorker.ready
+    let subscription = await registration.pushManager.getSubscription()
+
+    if (!subscription) {
+      const permission =
+        Notification.permission === 'granted'
+          ? 'granted'
+          : await Notification.requestPermission()
+
+      if (permission !== 'granted') {
+        return
+      }
+
+      const keyResponse = await api.getVapidPublicKey().catch(() => null)
+      const vapidPublicKey = keyResponse?.publicKey || import.meta.env.VITE_VAPID_PUBLIC_KEY
+
+      if (!vapidPublicKey) {
+        return
+      }
+
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      })
+    }
+
+    await api.subscribePush(subscription.toJSON())
+  } catch (error) {
+    console.log('[App] Push subscription setup failed:', error)
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('offline-request-queued', handleQueuedNotice)
+  navigator.serviceWorker?.addEventListener('message', handleServiceWorkerMessage)
+  setupPushSubscription()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('offline-request-queued', handleQueuedNotice)
+  navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerMessage)
+
+  if (syncBannerTimeout) {
+    window.clearTimeout(syncBannerTimeout)
+  }
+})
+
+watch(
+  () => authState.token,
+  (token) => {
+    if (token) {
+      setupPushSubscription()
+    }
+  }
+)
 </script>
 
 <template>
   <div class="layout">
     <header class="topbar">
-      <h1>Pokédex Fullstack</h1>
+      <h1>Cubopoke</h1>
       <nav>
         <RouterLink v-if="isAuth" to="/">Inicio</RouterLink>
         <RouterLink v-if="isAuth" to="/favorites">Favoritos</RouterLink>
@@ -29,7 +136,20 @@ const closeSession = () => {
     </header>
 
     <main class="container">
+      <section v-if="syncBanner" class="card sync-banner" role="status" aria-live="polite">
+        {{ syncBanner }}
+      </section>
       <RouterView />
     </main>
   </div>
 </template>
+
+<style scoped>
+.sync-banner {
+  margin-bottom: 0.9rem;
+  border-left: 5px solid var(--blue-main);
+  background: var(--green-soft);
+  color: #0b6b31;
+  font-weight: 600;
+}
+</style>

@@ -11,6 +11,7 @@ const ok = ref('')
 
 const form = reactive({
   friendId: '',
+  friendCode: '',
   teamId: '',
   opponentTeamId: '',
 })
@@ -34,11 +35,32 @@ const loadData = async () => {
 const refreshEnemyTeams = async () => {
   form.opponentTeamId = ''
   enemyTeams.value = []
+  form.friendCode = ''
   if (!form.friendId) {
     return
   }
 
   enemyTeams.value = await api.listFriendTeams(form.friendId)
+}
+
+const loadEnemyTeamsByCode = async () => {
+  error.value = ''
+  ok.value = ''
+  form.opponentTeamId = ''
+  enemyTeams.value = []
+
+  if (!form.friendCode) {
+    return
+  }
+
+  try {
+    const data = await api.listFriendTeamsByCode(form.friendCode)
+    form.friendId = data.friend._id
+    enemyTeams.value = data.teams
+    ok.value = `Rival cargada: ${data.friend.email}`
+  } catch (err) {
+    error.value = err.message
+  }
 }
 
 const createBattle = async () => {
@@ -67,6 +89,17 @@ onMounted(loadData)
         </option>
       </select>
 
+      <div class="inline">
+        <input
+          v-model="form.friendCode"
+          placeholder="O usa código de jugadora"
+          style="flex: 1"
+        />
+        <button type="button" class="secondary" @click="loadEnemyTeamsByCode">
+          Cargar por código
+        </button>
+      </div>
+
       <select v-model="form.teamId" required>
         <option value="">Tu equipo</option>
         <option v-for="team in myTeams" :key="team._id" :value="team._id">{{ team.name }}</option>
@@ -79,7 +112,7 @@ onMounted(loadData)
 
       <button>Iniciar batalla</button>
     </form>
-    <p class="muted">Selecciona una amiga para cargar sus equipos disponibles.</p>
+    <p class="muted">Puedes seleccionar amiga o cargar rival con su código de jugadora.</p>
     <p class="error" v-if="error">{{ error }}</p>
     <p class="ok" v-if="ok">{{ ok }}</p>
   </section>

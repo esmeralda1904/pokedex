@@ -1,6 +1,6 @@
 {
-  "name": "Pokédex Fullstack",
-  "short_name": "Pokédex",
+  "name": "Cubopoke",
+  "short_name": "Cubopoke",
   "description": "Explora, colecciona y batalla con tus Pokémon favoritos",
   "start_url": "/",
   "scope": "/",

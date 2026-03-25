@@ -35,10 +35,13 @@ body {
   background: linear-gradient(90deg, #12c2e9 0%, #09d2b8 100%);
   position: sticky;
   top: 0;
+  z-index: 20;
 }
 
 .topbar h1 {
   color: var(--white);
+  margin: 0;
+  font-size: 1.35rem;
 }
 
 .topbar nav {
@@ -51,7 +54,7 @@ body {
   text-decoration: none;
   color: var(--white);
   font-weight: 600;
-  padding: 0.25rem 0.45rem;
+  padding: 0.42rem 0.62rem;
   border-radius: 6px;
 }
 
@@ -63,6 +66,26 @@ body {
   max-width: 1100px;
   margin: 1.2rem auto;
   padding: 0 1rem 1.5rem;
+}
+
+.view-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pagination-row {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
 }
 
 .card {
@@ -155,6 +178,14 @@ button.danger {
   color: #64748b;
 }
 
+.card > :first-child {
+  margin-top: 0;
+}
+
+.card > :last-child {
+  margin-bottom: 0;
+}
+
 .star-btn {
   width: 38px;
   height: 38px;
@@ -166,6 +197,7 @@ button.danger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .star-btn:hover {
@@ -173,14 +205,27 @@ button.danger {
 }
 
 .star-btn.active {
-  background: var(--blue-main);
-  color: var(--white);
-  border-color: var(--blue-main);
+  background: #e9ddff;
+  color: #7a4bc2;
+  border-color: #c9aeff;
+  animation: favorite-pop 0.35s ease-out;
 }
 
 .star-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+@keyframes favorite-pop {
+  0% {
+    transform: scale(0.85);
+  }
+  55% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .favorite-header {
@@ -244,6 +289,14 @@ button.danger {
   margin: 0.2rem auto 0.45rem;
 }
 
+.pokemon-card {
+  text-align: center;
+}
+
+.pokemon-card .inline {
+  justify-content: center;
+}
+
 .team-pokemon-row {
   display: inline-flex;
   align-items: center;
@@ -254,4 +307,92 @@ button.danger {
   width: 30px;
   height: 30px;
   object-fit: contain;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 0.9rem 1rem;
+  }
+
+  .topbar nav {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+
+  .topbar nav::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .topbar nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 999px;
+  }
+
+  .container {
+    margin: 0.9rem auto;
+    padding: 0 0.75rem 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar h1 {
+    font-size: 1.12rem;
+  }
+
+  .topbar button {
+    width: 100%;
+  }
+
+  .card {
+    padding: 0.8rem;
+    border-radius: 10px;
+  }
+
+  .form-row > * {
+    flex: 1 1 100%;
+  }
+
+  .pagination-row {
+    justify-content: space-between;
+  }
+
+  .pagination-row .muted {
+    width: 100%;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .pokemon-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+  }
+
+  .pokemon-card {
+    padding: 0.7rem;
+    border-radius: 10px;
+  }
+
+  .pokemon-card h3 {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .list-pokemon-image {
+    width: 76px;
+    height: 76px;
+    margin-bottom: 0.35rem;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 0.9rem;
+  }
 }

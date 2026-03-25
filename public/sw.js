@@ -2,6 +2,17 @@ const CACHE_VERSION = 'pokedex-v1';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-app-shell`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
+const OFFLINE_DB = 'pokedex-offline-db';
+const OFFLINE_REQUEST_STORE = 'offline-requests';
+const SYNC_TAG = 'pokedex-sync-requests';
+const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+const notifyClients = async (message) => {
+  const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+  for (const client of clients) {
+    client.postMessage(message);
+  }
+};
 
 const APP_SHELL = [
   '/',
@@ -10,6 +21,131 @@ const APP_SHELL = [
 ];
 
 const isApiRequest = (url) => url.includes('/api/');
+const isWriteMethod = (method) => WRITE_METHODS.has(method.toUpperCase());
+
+const openOfflineDb = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(OFFLINE_DB, 1);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+
+      if (!db.objectStoreNames.contains(OFFLINE_REQUEST_STORE)) {
+        db.createObjectStore(OFFLINE_REQUEST_STORE, {
+          keyPath: 'id',
+          autoIncrement: true,
+        });
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const addQueuedRequest = async (payload) => {
+  const db = await openOfflineDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(OFFLINE_REQUEST_STORE, 'readwrite');
+    const store = tx.objectStore(OFFLINE_REQUEST_STORE);
+    store.add(payload);
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+};
+
+const getQueuedRequests = async () => {
+  const db = await openOfflineDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(OFFLINE_REQUEST_STORE, 'readonly');
+    const store = tx.objectStore(OFFLINE_REQUEST_STORE);
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const removeQueuedRequest = async (id) => {
+  const db = await openOfflineDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(OFFLINE_REQUEST_STORE, 'readwrite');
+    const store = tx.objectStore(OFFLINE_REQUEST_STORE);
+    store.delete(id);
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+};
+
+const queueFailedRequest = async (request) => {
+  const headers = {};
+  request.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+
+  let body = null;
+
+  if (!['GET', 'HEAD'].includes(request.method)) {
+    body = await request.clone().text().catch(() => null);
+    if (body === '') {
+      body = null;
+    }
+  }
+
+  await addQueuedRequest({
+    url: request.url,
+    method: request.method,
+    headers,
+    body,
+    createdAt: Date.now(),
+  });
+};
+
+const registerSyncTask = async () => {
+  if (!self.registration.sync) {
+    return;
+  }
+
+  try {
+    await self.registration.sync.register(SYNC_TAG);
+  } catch (error) {
+    console.log('[SW] Sync registration failed', error);
+  }
+};
+
+const replayQueuedRequests = async () => {
+  const queuedRequests = await getQueuedRequests();
+  let syncedCount = 0;
+
+  for (const queuedRequest of queuedRequests) {
+    try {
+      const response = await fetch(queuedRequest.url, {
+        method: queuedRequest.method,
+        headers: queuedRequest.headers,
+        body: queuedRequest.body ?? undefined,
+      });
+
+      if (response.ok || (response.status >= 400 && response.status < 500)) {
+        await removeQueuedRequest(queuedRequest.id);
+        syncedCount += 1;
+      }
+    } catch (error) {
+      console.log('[SW] Replay failed, request kept in queue', error);
+    }
+  }
+
+  if (syncedCount > 0) {
+    await notifyClients({
+      type: 'SYNC_COMPLETED',
+      syncedCount,
+    });
+  }
+};
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
@@ -53,9 +189,68 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+self.addEventListener('sync', (event) => {
+  if (event.tag === SYNC_TAG) {
+    event.waitUntil(replayQueuedRequests());
+  }
+});
+
+self.addEventListener('push', (event) => {
+  let payload = {
+    title: 'Cubopoke',
+    body: 'Tienes una nueva notificación',
+    url: '/',
+    icon: '/icon-192.png',
+    badge: '/icon-96.png',
+  };
+
+  try {
+    if (event.data) {
+      payload = { ...payload, ...event.data.json() };
+    }
+  } catch (error) {
+    if (event.data) {
+      payload.body = event.data.text();
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: payload.icon,
+      badge: payload.badge,
+      data: {
+        url: payload.url || '/',
+      },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const existingClient = clientList.find((client) => client.url.includes(targetUrl));
+
+      if (existingClient) {
+        return existingClient.focus();
+      }
+
+      return self.clients.openWindow(targetUrl);
+    })
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  if (isApiRequest(url.href) && isWriteMethod(request.method)) {
+    event.respondWith(networkWithOfflineQueue(request));
+    return;
+  }
 
   if (request.method !== 'GET') {
     return;
@@ -67,6 +262,33 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(cacheFirstStatic(request));
   }
 });
+
+const networkWithOfflineQueue = async (request) => {
+  try {
+    return await fetch(request);
+  } catch (error) {
+    console.log('[SW] Write request failed; queueing for sync', error);
+
+    await queueFailedRequest(request);
+    await registerSyncTask();
+    await notifyClients({ type: 'SYNC_QUEUED' });
+
+    return new Response(
+      JSON.stringify({
+        queued: true,
+        offline: true,
+        message: 'Sin conexión. La petición se guardó para sincronización automática.',
+      }),
+      {
+        status: 202,
+        statusText: 'Accepted',
+        headers: new Headers({
+          'Content-Type': 'application/json',
+        }),
+      }
+    );
+  }
+};
 
 const cacheFirstStatic = async (request) => {
   const cached = await caches.match(request);

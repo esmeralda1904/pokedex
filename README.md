@@ -13,7 +13,13 @@ npm install
 2. Verificar `.env`:
 
 ```env
-VITE_API_URL=http://localhost:3000/api
+VITE_API_URL=http://localhost:3001/api
+
+# Opcional: activar PWA en desarrollo para probar instalación
+VITE_ENABLE_SW_DEV=true
+
+# Opcional: limpiar service worker y cachés en desarrollo
+VITE_RESET_SW_DEV=false
 ```
 
 3. Ejecutar:
@@ -31,4 +37,12 @@ npm run dev
 - Administración de equipos
 - Gestión de amigas por código
 - Batallas entre amigas
+
+## Responsive + PWA
+
+- Layout responsive para móvil/tablet/escritorio (navbar adaptable, tarjetas y grids en una columna en pantallas pequeñas).
+- Manifest disponible en `public/manifest.json`.
+- Service Worker en `public/sw.js` para cache, modo offline básico, cola offline y sync en segundo plano.
+- En producción, la app se registra como PWA automáticamente.
+- En desarrollo, se puede habilitar el registro de SW con `VITE_ENABLE_SW_DEV=true`.
 
