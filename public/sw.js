@@ -228,6 +228,7 @@ self.addEventListener('push', (event) => {
       data: {
         url: payload.url || '/',
         actionUrls: payload.actionUrls || {},
+        extra: payload.data || {},
       },
     })
     .catch((error) => {
@@ -250,16 +251,25 @@ self.addEventListener('notificationclick', (event) => {
   const defaultUrl = event.notification.data?.url || '/';
   const actionUrls = event.notification.data?.actionUrls || {};
   const targetUrl = event.action && actionUrls[event.action] ? actionUrls[event.action] : defaultUrl;
+  const destinationUrl = new URL(targetUrl, self.location.origin).href;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      const existingClient = clientList.find((client) => client.url.includes(targetUrl));
+      const existingClient = clientList.find((client) => {
+        try {
+          const current = new URL(client.url);
+          const target = new URL(destinationUrl);
+          return current.origin === target.origin && current.pathname === target.pathname;
+        } catch (error) {
+          return false;
+        }
+      });
 
       if (existingClient) {
         return existingClient.focus();
       }
 
-      return self.clients.openWindow(targetUrl);
+      return self.clients.openWindow(destinationUrl);
     })
   );
 });
