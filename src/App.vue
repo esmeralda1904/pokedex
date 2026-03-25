@@ -153,9 +153,16 @@ const setupPushSubscription = async () => {
       })
     }
 
-    await api.subscribePush(subscription.toJSON())
+    const subscribeResult = await api.subscribePush(subscription.toJSON())
+
+    if (subscribeResult?.testPush?.sent > 0) {
+      showSyncBanner('Notificaciones activadas correctamente.', 3500)
+    } else {
+      showSyncBanner('Suscripción creada, pero no se confirmó push del sistema.', 5000)
+    }
   } catch (error) {
     console.log('[App] Push subscription setup failed:', error)
+    showSyncBanner(error.message || 'No se pudo activar notificaciones push.', 5000)
   }
 }
 
