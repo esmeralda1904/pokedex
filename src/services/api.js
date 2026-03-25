@@ -1,6 +1,18 @@
 import { authState, logout } from '../stores/auth'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const DEFAULT_API_URL = 'http://localhost:3001/api'
+
+const normalizeApiBaseUrl = (value) => {
+  const sanitizedValue = (value || DEFAULT_API_URL).trim().replace(/\/+$/, '')
+
+  if (sanitizedValue.endsWith('/api')) {
+    return sanitizedValue
+  }
+
+  return `${sanitizedValue}/api`
+}
+
+const API_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL)
 
 const notifyQueuedRequest = (payload) => {
   window.dispatchEvent(
