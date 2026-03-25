@@ -24,7 +24,7 @@ const loadData = async () => {
   error.value = ''
   try {
     const [friendsData, teamsData] = await Promise.all([api.listFriends(), api.listTeams()])
-    friends.value = friendsData
+    friends.value = Array.isArray(friendsData) ? friendsData : friendsData.friends || []
     myTeams.value = teamsData
     await loadBattles()
   } catch (err) {

@@ -87,6 +87,8 @@ export const api = {
 
   listFriends: () => request('/friends'),
   addFriend: (payload) => request('/friends/add', { method: 'POST', body: JSON.stringify(payload) }),
+  acceptFriendRequest: (requesterId) => request(`/friends/requests/${requesterId}/accept`, { method: 'POST' }),
+  rejectFriendRequest: (requesterId) => request(`/friends/requests/${requesterId}`, { method: 'DELETE' }),
 
   listBattles: () => request('/battles'),
   createBattle: (payload) => request('/battles', { method: 'POST', body: JSON.stringify(payload) }),

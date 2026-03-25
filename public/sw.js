@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'pokedex-v1';
+const CACHE_VERSION = 'pokedex-v2';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-app-shell`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -203,6 +203,7 @@ self.addEventListener('push', (event) => {
     url: '/',
     icon: '/icon-192.png',
     badge: '/icon-96.png',
+    actions: [],
   };
 
   try {
@@ -220,8 +221,10 @@ self.addEventListener('push', (event) => {
       body: payload.body,
       icon: payload.icon,
       badge: payload.badge,
+      actions: payload.actions,
       data: {
         url: payload.url || '/',
+        actionUrls: payload.actionUrls || {},
       },
     })
   );
@@ -229,7 +232,9 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/';
+  const defaultUrl = event.notification.data?.url || '/';
+  const actionUrls = event.notification.data?.actionUrls || {};
+  const targetUrl = event.action && actionUrls[event.action] ? actionUrls[event.action] : defaultUrl;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
