@@ -27,28 +27,31 @@ const showSyncBanner = (message, timeout = 4000) => {
   }, timeout)
 }
 
-const showSystemNotificationFromApp = (payload = {}) => {
-  if (!('Notification' in window) || Notification.permission !== 'granted') {
+const showSystemNotificationFromApp = async (payload = {}) => {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
     return
   }
 
-  if (document.visibilityState !== 'visible') {
+  if (Notification.permission !== 'granted') {
     return
   }
 
-  const notification = new Notification(payload.title || 'Cubopoke', {
-    body: payload.body || 'Tienes una nueva notificación',
-    icon: payload.icon || '/icon-192.png',
-    badge: payload.badge || '/icon-96.png',
-    tag: payload.tag || 'cubopoke-alert',
-  })
+  try {
+    const registration = await navigator.serviceWorker.ready
 
-  notification.onclick = () => {
-    window.focus()
-
-    if (payload.url) {
-      router.push(payload.url)
-    }
+    await registration.showNotification(payload.title || 'Cubopoke', {
+      body: payload.body || 'Tienes una nueva notificación',
+      icon: payload.icon || '/icon-192.png',
+      badge: payload.badge || '/icon-96.png',
+      tag: payload.tag || 'cubopoke-alert',
+      renotify: true,
+      requireInteraction: true,
+      data: {
+        url: payload.url || '/',
+      },
+    })
+  } catch (error) {
+    console.log('[App] registration.showNotification failed:', error)
   }
 }
 
