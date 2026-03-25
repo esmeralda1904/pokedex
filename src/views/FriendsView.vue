@@ -64,6 +64,19 @@ const rejectRequest = async (requesterId) => {
   }
 }
 
+const deleteFriend = async (friendId) => {
+  error.value = ''
+  ok.value = ''
+
+  try {
+    const response = await api.deleteFriend(friendId)
+    ok.value = response.message || 'Amiga eliminada'
+    await load()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -104,6 +117,7 @@ onMounted(load)
       <h3>{{ friend.email }}</h3>
       <p>Código: {{ friend.friendCode }}</p>
       <p class="muted">ID: {{ friend._id }}</p>
+      <button class="danger" @click="deleteFriend(friend._id)">Eliminar amiga</button>
     </article>
   </section>
 </template>
