@@ -221,18 +221,18 @@ onMounted(load)
 
 <template>
   <div class="view-stack">
-    <section class="card">
+    <section class="card teams-builder-card">
       <h2>Equipos</h2>
       <form @submit.prevent="createTeam">
       <input v-model="createForm.name" placeholder="Nombre del equipo" required />
 
-      <details style="margin: 0.6rem 0 0.8rem">
+      <details class="favorites-panel" style="margin: 0.6rem 0 0.8rem">
         <summary style="cursor: pointer; font-weight: 600">Favoritos</summary>
         <p class="muted" style="margin: 0.6rem 0 0.4rem">Selecciona favoritos (máx {{ maxTeamSize }})</p>
 
         <div class="grid" style="margin-bottom: 0.8rem">
           <label
-            class="inline"
+            class="inline favorite-option"
             v-for="item in paginatedFavorites"
             :key="item._id"
             style="display: flex; align-items: center; gap: 0.5rem"
@@ -283,17 +283,17 @@ onMounted(load)
       </form>
 
       <section v-if="selectedFavorites.length > 0" class="view-stack">
-        <h3>Seleccionar movimientos</h3>
+        <h3 class="section-title">Seleccionar movimientos</h3>
         <p class="muted">Elige hasta {{ maxMovesPerPokemon }} movimientos por Pokémon.</p>
 
-      <article class="card" v-for="item in selectedFavorites" :key="`moves-${item._id}`">
+      <article class="card move-picker-card" v-for="item in selectedFavorites" :key="`moves-${item._id}`">
         <h4 style="margin-bottom: 0.5rem; text-transform: capitalize">{{ item.nickname || item.pokemonName }}</h4>
 
         <p class="muted" v-if="movesLoadingByName[item.pokemonName]">Cargando movimientos...</p>
 
         <div class="grid grid-2" v-else>
           <label
-            class="inline"
+            class="inline move-option"
             v-for="move in movesByName[item.pokemonName] || []"
             :key="`${item._id}-${move}`"
             style="display: flex; align-items: center; gap: 0.5rem"
@@ -322,7 +322,7 @@ onMounted(load)
     </section>
 
     <section class="grid grid-2">
-      <article class="card" v-for="team in teams" :key="team._id">
+      <article class="card team-card" v-for="team in teams" :key="team._id">
       <h3>{{ team.name }}</h3>
       <p class="muted">Pokémon del equipo</p>
       <ul>
@@ -348,13 +348,13 @@ onMounted(load)
       <section v-if="editOpenByTeamId[team._id]" class="view-stack">
         <p class="muted">Elige hasta {{ maxMovesPerPokemon }} movimientos por Pokémon.</p>
 
-        <article class="card" v-for="(pokemon, index) in team.pokemons" :key="`team-edit-${team._id}-${index}`">
+        <article class="card move-picker-card" v-for="(pokemon, index) in team.pokemons" :key="`team-edit-${team._id}-${index}`">
           <h4 style="text-transform: capitalize; margin-bottom: 0.5rem">{{ pokemon.nickname || pokemon.pokemonName }}</h4>
           <p class="muted" v-if="movesLoadingByName[pokemon.pokemonName]">Cargando movimientos...</p>
 
           <div class="grid grid-2" v-else>
             <label
-              class="inline"
+              class="inline move-option"
               v-for="move in movesByName[pokemon.pokemonName] || []"
               :key="`team-move-${team._id}-${index}-${move}`"
               style="display: flex; align-items: center; gap: 0.5rem"
@@ -388,3 +388,53 @@ onMounted(load)
     </section>
   </div>
 </template>
+
+<style scoped>
+.teams-builder-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f4fcff 100%);
+  border-color: #8fdfff;
+}
+
+.section-title {
+  color: #1f5b8d;
+  margin: 0;
+}
+
+.favorites-panel {
+  background: #eff9ff;
+  border: 1px solid #c8ebff;
+  border-radius: 10px;
+  padding: 0.6rem;
+}
+
+.favorite-option {
+  background: #ffffff;
+  border: 1px solid #d5eefe;
+  border-radius: 10px;
+  padding: 0.4rem 0.6rem;
+}
+
+.move-picker-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f7f4ff 100%);
+  border-color: #d8c9ff;
+}
+
+.move-option {
+  background: #ffffff;
+  border: 1px solid #e2d6ff;
+  border-radius: 9px;
+  padding: 0.35rem 0.5rem;
+}
+
+.team-card {
+  background: linear-gradient(180deg, #ffffff 0%, #eefcff 100%);
+  border-color: #a6e2ff;
+}
+
+@media (max-width: 640px) {
+  .favorite-option,
+  .move-option {
+    padding: 0.4rem 0.45rem;
+  }
+}
+</style>

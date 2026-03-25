@@ -132,7 +132,7 @@ watch(
         <RouterLink v-if="!isAuth" to="/login">Login</RouterLink>
         <RouterLink v-if="!isAuth" to="/register">Registro</RouterLink>
       </nav>
-      <button v-if="isAuth" class="danger" @click="closeSession">Cerrar sesión</button>
+      <button v-if="isAuth" class="danger logout-btn" @click="closeSession">Cerrar sesión</button>
     </header>
 
     <main class="container">

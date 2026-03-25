@@ -62,6 +62,12 @@ body {
   background: rgba(255, 255, 255, 0.22);
 }
 
+.logout-btn {
+  padding: 0.38rem 0.62rem;
+  font-size: 0.82rem;
+  line-height: 1.1;
+}
+
 .container {
   max-width: 1100px;
   margin: 1.2rem auto;
@@ -345,6 +351,11 @@ button.danger {
 
   .topbar button {
     width: 100%;
+  }
+
+  .topbar .logout-btn {
+    width: auto;
+    align-self: flex-start;
   }
 
   .card {
