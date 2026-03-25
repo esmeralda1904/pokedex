@@ -27,6 +27,31 @@ const showSyncBanner = (message, timeout = 4000) => {
   }, timeout)
 }
 
+const showSystemNotificationFromApp = (payload = {}) => {
+  if (!('Notification' in window) || Notification.permission !== 'granted') {
+    return
+  }
+
+  if (document.visibilityState !== 'visible') {
+    return
+  }
+
+  const notification = new Notification(payload.title || 'Cubopoke', {
+    body: payload.body || 'Tienes una nueva notificación',
+    icon: payload.icon || '/icon-192.png',
+    badge: payload.badge || '/icon-96.png',
+    tag: payload.tag || 'cubopoke-alert',
+  })
+
+  notification.onclick = () => {
+    window.focus()
+
+    if (payload.url) {
+      router.push(payload.url)
+    }
+  }
+}
+
 const handleQueuedNotice = () => {
   showSyncBanner('Sin internet: tu acción quedó pendiente y se enviará automáticamente.', 5000)
 }
@@ -44,6 +69,7 @@ const handleServiceWorkerMessage = (event) => {
 
   if (message?.type === 'PUSH_RECEIVED') {
     const pushPayload = message.payload || {}
+    showSystemNotificationFromApp(pushPayload)
     showSyncBanner(pushPayload.body || 'Tienes una nueva notificación.', 4500)
     window.dispatchEvent(
       new CustomEvent('app-push-received', {

@@ -216,18 +216,27 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  const showNotificationPromise = self.registration
+    .showNotification(payload.title, {
+      body: payload.body,
+      icon: payload.icon,
+      badge: payload.badge,
+      actions: payload.actions,
+      tag: payload.tag || 'cubopoke-alert',
+      renotify: true,
+      requireInteraction: true,
+      data: {
+        url: payload.url || '/',
+        actionUrls: payload.actionUrls || {},
+      },
+    })
+    .catch((error) => {
+      console.log('[SW] showNotification failed', error);
+    });
+
   event.waitUntil(
     Promise.all([
-      self.registration.showNotification(payload.title, {
-        body: payload.body,
-        icon: payload.icon,
-        badge: payload.badge,
-        actions: payload.actions,
-        data: {
-          url: payload.url || '/',
-          actionUrls: payload.actionUrls || {},
-        },
-      }),
+      showNotificationPromise,
       notifyClients({
         type: 'PUSH_RECEIVED',
         payload,
