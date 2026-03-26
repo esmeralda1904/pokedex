@@ -146,12 +146,22 @@ const acceptBattle = async (battleId) => {
 
     if (updatedBattle.status === 'in_progress') {
       ok.value = 'Reto aceptado. Iniciando batalla...'
-      openArena(updatedBattle._id)
+      setTimeout(() => {
+        router.push({
+          path: '/battles/arena',
+          query: { battleId: updatedBattle._id },
+        })
+      }, 600)
       return
     }
 
-    ok.value = 'Reto aceptado. Seleccionen equipo para iniciar.'
-    await loadBattles()
+    ok.value = 'Reto aceptado. Elige tu equipo para empezar.'
+    setTimeout(() => {
+      router.push({
+        path: '/battles/team-select',
+        query: { battleId: updatedBattle._id },
+      })
+    }, 600)
   } catch (err) {
     error.value = err.message
   }
