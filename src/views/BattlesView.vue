@@ -81,6 +81,7 @@ const battleResultClass = (battle) => {
 }
 
 const isOpponent = (battle) => String(battle.opponent?._id) === String(authState.user?._id)
+const isChallenger = (battle) => String(battle.user?._id) === String(authState.user?._id)
 
 const isMyTeamMissing = (battle) => {
   if (String(battle.user?._id) === String(authState.user?._id)) {
@@ -115,6 +116,32 @@ const acceptBattle = async (battleId) => {
   try {
     await api.acceptBattle(battleId)
     ok.value = 'Reto aceptado. Seleccionen equipo para iniciar.'
+    await loadBattles()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+const rejectBattle = async (battleId) => {
+  error.value = ''
+  ok.value = ''
+
+  try {
+    await api.rejectBattle(battleId)
+    ok.value = 'Solicitud rechazada.'
+    await loadBattles()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+const cancelBattle = async (battleId) => {
+  error.value = ''
+  ok.value = ''
+
+  try {
+    await api.cancelBattle(battleId)
+    ok.value = 'Solicitud eliminada correctamente.'
     await loadBattles()
   } catch (err) {
     error.value = err.message
@@ -207,7 +234,14 @@ onBeforeUnmount(() => {
       <p class="muted">Estado: <strong>{{ normalizeStatus(battle.status) }}</strong></p>
 
       <template v-if="battle.status === 'pending' && isOpponent(battle)">
-        <button @click="acceptBattle(battle._id)">Aceptar reto</button>
+        <div class="inline">
+          <button @click="acceptBattle(battle._id)">Aceptar reto</button>
+          <button class="danger" @click="rejectBattle(battle._id)">Rechazar</button>
+        </div>
+      </template>
+
+      <template v-if="battle.status === 'pending' && isChallenger(battle)">
+        <button class="danger" @click="cancelBattle(battle._id)">Eliminar solicitud</button>
       </template>
 
       <template v-if="battle.status === 'accepted' && isMyTeamMissing(battle)">
@@ -215,13 +249,21 @@ onBeforeUnmount(() => {
           <option value="">Selecciona tu equipo</option>
           <option v-for="team in myTeams" :key="team._id" :value="team._id">{{ team.name }}</option>
         </select>
-        <button class="secondary" @click="selectTeam(battle._id)">Guardar equipo</button>
+        <div class="inline">
+          <button class="secondary" @click="selectTeam(battle._id)">Guardar equipo</button>
+          <button class="danger" v-if="isChallenger(battle)" @click="cancelBattle(battle._id)">Eliminar solicitud</button>
+        </div>
       </template>
 
       <template v-if="battle.status === 'in_progress' || battle.status === 'finished'">
         <p class="muted">HP: {{ battle.userHp }} - {{ battle.opponentHp }}</p>
         <p v-if="battle.status === 'finished'" :class="battleResultClass(battle)"><strong>{{ battleResultLabel(battle) }}</strong></p>
-        <button class="secondary" @click="openArena(battle._id)">Abrir batalla</button>
+        <button
+          class="secondary"
+          @click="openArena(battle._id)"
+        >
+          {{ battle.status === 'in_progress' ? 'Jugar' : 'Ver batalla' }}
+        </button>
       </template>
 
       <p class="muted">{{ battle.summary }}</p>
