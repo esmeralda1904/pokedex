@@ -98,10 +98,10 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="card" style="margin-bottom: 1rem">
-    <h2>Batallas entre amigas</h2>
+    <h2>Batallas entre amigos</h2>
     <form @submit.prevent="createBattle">
       <select v-model="form.friendId" @change="refreshEnemyTeams" required>
-        <option value="">Selecciona amiga</option>
+        <option value="">Selecciona amigo</option>
         <option v-for="friend in friends" :key="friend._id" :value="friend._id">
           {{ friend.email }}
         </option>
@@ -124,13 +124,13 @@ onBeforeUnmount(() => {
       </select>
 
       <select v-model="form.opponentTeamId" required>
-        <option value="">Equipo de tu amiga</option>
+        <option value="">Equipo de tu amigo</option>
         <option v-for="team in enemyTeams" :key="team._id" :value="team._id">{{ team.name }}</option>
       </select>
 
       <button>Iniciar batalla</button>
     </form>
-    <p class="muted">Puedes seleccionar amiga o cargar rival con su código de jugadora.</p>
+    <p class="muted">Puedes seleccionar amigo o cargar rival con su código de jugador.</p>
     <p class="error" v-if="error">{{ error }}</p>
     <p class="ok" v-if="ok">{{ ok }}</p>
   </section>

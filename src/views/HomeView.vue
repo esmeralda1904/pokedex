@@ -101,7 +101,7 @@ onMounted(async () => {
   <div class="view-stack">
     <section class="card">
       <h2>Explorar Pokémon</h2>
-      <p class="muted">Tu código de amiga: <strong>{{ authState.user?.friendCode }}</strong></p>
+      <p class="muted">Tu código de amigo: <strong>{{ authState.user?.friendCode }}</strong></p>
 
       <div class="form-row">
         <input v-model="filters.name" placeholder="Buscar solo por nombre" />

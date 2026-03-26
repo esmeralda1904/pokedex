@@ -84,7 +84,7 @@ const deleteFriend = async (friendId) => {
 
   try {
     const response = await api.deleteFriend(friendId)
-    ok.value = response.message || 'Amiga eliminada'
+    ok.value = response.message || 'Amigo eliminado'
     await load()
   } catch (err) {
     error.value = err.message
@@ -115,7 +115,7 @@ onBeforeUnmount(() => {
   <section class="card" style="margin-bottom: 1rem">
     <h2>Amigos</h2>
     <form @submit.prevent="addFriend">
-      <input v-model="friendCode" placeholder="Código de amiga" required />
+      <input v-model="friendCode" placeholder="Código de amigo" required />
       <button>Enviar solicitud</button>
     </form>
     <p class="error" v-if="error">{{ error }}</p>
@@ -151,7 +151,7 @@ onBeforeUnmount(() => {
       <h3>{{ friend.email }}</h3>
       <p>Código: {{ friend.friendCode }}</p>
       <p class="muted">ID: {{ friend._id }}</p>
-      <button class="danger friend-action-btn" @click="deleteFriend(friend._id)">Eliminar amiga</button>
+      <button class="danger friend-action-btn" @click="deleteFriend(friend._id)">Eliminar amigo</button>
     </article>
   </section>
 </template>
