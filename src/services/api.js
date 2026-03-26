@@ -94,6 +94,7 @@ export const api = {
   listBattles: () => request('/battles'),
   createBattleChallenge: (payload) => request('/battles/challenges', { method: 'POST', body: JSON.stringify(payload) }),
   getBattle: (battleId) => request(`/battles/${battleId}`),
+  deleteBattle: (battleId) => request(`/battles/${battleId}`, { method: 'DELETE' }),
   acceptBattle: (battleId) => request(`/battles/${battleId}/accept`, { method: 'POST' }),
   rejectBattle: (battleId) => request(`/battles/${battleId}/reject`, { method: 'POST' }),
   cancelBattle: (battleId) => request(`/battles/${battleId}/cancel`, { method: 'POST' }),

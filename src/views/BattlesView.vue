@@ -47,8 +47,36 @@ const normalizeStatus = (status) => {
   return map[status] || status
 }
 
+const getEntityId = (entity) => {
+  if (!entity) {
+    return ''
+  }
+
+  if (typeof entity === 'string') {
+    return entity
+  }
+
+  if (entity._id) {
+    return String(entity._id)
+  }
+
+  return String(entity)
+}
+
+const getBattleStatus = (battle) => {
+  if (battle?.status) {
+    return battle.status
+  }
+
+  if (battle?.winner) {
+    return 'finished'
+  }
+
+  return 'pending'
+}
+
 const battleResultLabel = (battle) => {
-  if (battle.status !== 'finished') {
+  if (getBattleStatus(battle) !== 'finished') {
     return ''
   }
 
@@ -80,11 +108,11 @@ const battleResultClass = (battle) => {
   return 'battle-result'
 }
 
-const isOpponent = (battle) => String(battle.opponent?._id) === String(authState.user?._id)
-const isChallenger = (battle) => String(battle.user?._id) === String(authState.user?._id)
+const isOpponent = (battle) => getEntityId(battle.opponent) === String(authState.user?._id || '')
+const isChallenger = (battle) => getEntityId(battle.user) === String(authState.user?._id || '')
 
 const isMyTeamMissing = (battle) => {
-  if (String(battle.user?._id) === String(authState.user?._id)) {
+  if (isChallenger(battle)) {
     return !battle.team
   }
 
@@ -181,6 +209,25 @@ const openArena = (battleId) => {
   })
 }
 
+const deleteFinishedBattle = async (battleId) => {
+  error.value = ''
+  ok.value = ''
+
+  const confirmed = window.confirm('¿Quieres eliminar esta batalla finalizada?')
+
+  if (!confirmed) {
+    return
+  }
+
+  try {
+    await api.deleteBattle(battleId)
+    ok.value = 'Batalla eliminada correctamente.'
+    await loadBattles()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
 const handlePushRefresh = () => {
   loadData()
 }
@@ -231,20 +278,20 @@ onBeforeUnmount(() => {
     <article class="card" v-for="battle in battles" :key="battle._id">
       <h3>Batalla</h3>
       <p>{{ battle.user?.email }} vs {{ battle.opponent?.email }}</p>
-      <p class="muted">Estado: <strong>{{ normalizeStatus(battle.status) }}</strong></p>
+      <p class="muted">Estado: <strong>{{ normalizeStatus(getBattleStatus(battle)) }}</strong></p>
 
-      <template v-if="battle.status === 'pending' && isOpponent(battle)">
+      <template v-if="getBattleStatus(battle) === 'pending' && isOpponent(battle)">
         <div class="inline">
           <button @click="acceptBattle(battle._id)">Aceptar reto</button>
           <button class="danger" @click="rejectBattle(battle._id)">Rechazar</button>
         </div>
       </template>
 
-      <template v-if="battle.status === 'pending' && isChallenger(battle)">
+      <template v-if="getBattleStatus(battle) === 'pending' && isChallenger(battle)">
         <button class="danger" @click="cancelBattle(battle._id)">Eliminar solicitud</button>
       </template>
 
-      <template v-if="battle.status === 'accepted' && isMyTeamMissing(battle)">
+      <template v-if="getBattleStatus(battle) === 'accepted' && isMyTeamMissing(battle)">
         <select v-model="selectedTeamByBattle[battle._id]">
           <option value="">Selecciona tu equipo</option>
           <option v-for="team in myTeams" :key="team._id" :value="team._id">{{ team.name }}</option>
@@ -255,15 +302,24 @@ onBeforeUnmount(() => {
         </div>
       </template>
 
-      <template v-if="battle.status === 'in_progress' || battle.status === 'finished'">
+      <template v-if="getBattleStatus(battle) === 'in_progress' || getBattleStatus(battle) === 'finished'">
         <p class="muted">HP: {{ battle.userHp }} - {{ battle.opponentHp }}</p>
-        <p v-if="battle.status === 'finished'" :class="battleResultClass(battle)"><strong>{{ battleResultLabel(battle) }}</strong></p>
-        <button
-          class="secondary"
-          @click="openArena(battle._id)"
-        >
-          {{ battle.status === 'in_progress' ? 'Jugar' : 'Ver batalla' }}
-        </button>
+        <p v-if="getBattleStatus(battle) === 'finished'" :class="battleResultClass(battle)"><strong>{{ battleResultLabel(battle) }}</strong></p>
+        <div class="inline">
+          <button
+            class="secondary"
+            @click="openArena(battle._id)"
+          >
+            {{ getBattleStatus(battle) === 'in_progress' ? 'Jugar' : 'Ver batalla' }}
+          </button>
+          <button
+            v-if="getBattleStatus(battle) === 'finished'"
+            class="danger"
+            @click="deleteFinishedBattle(battle._id)"
+          >
+            Eliminar
+          </button>
+        </div>
       </template>
 
       <p class="muted">{{ battle.summary }}</p>
