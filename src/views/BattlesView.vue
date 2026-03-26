@@ -129,7 +129,7 @@ const createChallenge = async () => {
       friendCode: form.friendCode || undefined,
     })
 
-    ok.value = 'Reto enviado. Esperando aceptación del rival.'
+    ok.value = 'Desafío enviado. Esperando aceptación del rival.'
     form.friendCode = ''
     await loadBattles()
   } catch (err) {
@@ -142,7 +142,14 @@ const acceptBattle = async (battleId) => {
   ok.value = ''
 
   try {
-    await api.acceptBattle(battleId)
+    const updatedBattle = await api.acceptBattle(battleId)
+
+    if (updatedBattle.status === 'in_progress') {
+      ok.value = 'Reto aceptado. Iniciando batalla...'
+      openArena(updatedBattle._id)
+      return
+    }
+
     ok.value = 'Reto aceptado. Seleccionen equipo para iniciar.'
     await loadBattles()
   } catch (err) {
@@ -267,9 +274,9 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <button>Enviar reto</button>
+      <button>Desafiar</button>
     </form>
-    <p class="muted">Primero envías el reto. Si el rival acepta, ambos eligen equipo y empieza la batalla por turnos.</p>
+    <p class="muted">Envía el desafío. Cuando el rival acepte, entran directo a la batalla.</p>
     <p class="error" v-if="error">{{ error }}</p>
     <p class="ok" v-if="ok">{{ ok }}</p>
   </section>
@@ -282,7 +289,7 @@ onBeforeUnmount(() => {
 
       <template v-if="getBattleStatus(battle) === 'pending' && isOpponent(battle)">
         <div class="inline">
-          <button @click="acceptBattle(battle._id)">Aceptar reto</button>
+          <button @click="acceptBattle(battle._id)">Aceptar y jugar</button>
           <button class="danger" @click="rejectBattle(battle._id)">Rechazar</button>
         </div>
       </template>
