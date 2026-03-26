@@ -92,5 +92,9 @@ export const api = {
   deleteFriend: (friendId) => request(`/friends/${friendId}`, { method: 'DELETE' }),
 
   listBattles: () => request('/battles'),
-  createBattle: (payload) => request('/battles', { method: 'POST', body: JSON.stringify(payload) }),
+  createBattleChallenge: (payload) => request('/battles/challenges', { method: 'POST', body: JSON.stringify(payload) }),
+  getBattle: (battleId) => request(`/battles/${battleId}`),
+  acceptBattle: (battleId) => request(`/battles/${battleId}/accept`, { method: 'POST' }),
+  selectBattleTeam: (battleId, payload) => request(`/battles/${battleId}/team`, { method: 'POST', body: JSON.stringify(payload) }),
+  performBattleMove: (battleId, payload) => request(`/battles/${battleId}/move`, { method: 'POST', body: JSON.stringify(payload) }),
 }

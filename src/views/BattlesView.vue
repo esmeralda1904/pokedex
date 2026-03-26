@@ -2,6 +2,7 @@
 import { onMounted, onBeforeUnmount, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../services/api'
+import { authState } from '../stores/auth'
 
 const router = useRouter()
 
@@ -89,6 +90,31 @@ const createBattle = async () => {
   }
 }
 
+const battleResultLabel = (battle) => {
+  const winnerId = battle?.winner?._id || battle?.winner
+  const myId = authState.user?._id
+
+  if (!winnerId || !myId) {
+    return 'Resultado pendiente'
+  }
+
+  return String(winnerId) === String(myId) ? 'Ganaste!!!!' : 'Perdiste'
+}
+
+const battleResultClass = (battle) => {
+  const result = battleResultLabel(battle)
+
+  if (result === 'Ganaste!!!!') {
+    return 'battle-result win'
+  }
+
+  if (result === 'Perdiste') {
+    return 'battle-result lose'
+  }
+
+  return 'battle-result'
+}
+
 const handlePushRefresh = () => {
   loadData()
 }
@@ -153,7 +179,22 @@ onBeforeUnmount(() => {
       <h3>Batalla</h3>
       <p>{{ battle.user?.email }} vs {{ battle.opponent?.email }}</p>
       <p>Puntaje: {{ battle.userScore }} - {{ battle.opponentScore }}</p>
-      <p><strong>{{ battle.summary }}</strong></p>
+      <p :class="battleResultClass(battle)"><strong>{{ battleResultLabel(battle) }}</strong></p>
+      <p class="muted">{{ battle.summary }}</p>
     </article>
   </section>
 </template>
+
+<style scoped>
+.battle-result {
+  margin-bottom: 0.25rem;
+}
+
+.battle-result.win {
+  color: var(--green-main);
+}
+
+.battle-result.lose {
+  color: #b91c1c;
+}
+</style>

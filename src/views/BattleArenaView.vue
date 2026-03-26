@@ -25,9 +25,10 @@ const rivalMaxHp = ref(1)
 const myMoves = ref([])
 const movesUsed = ref(0)
 const maxMoves = 4
-const waitingRival = ref(false)
+const turnOwner = ref('player')
 const battleFinished = ref(false)
-const battleResult = ref('')
+const battleResultTitle = ref('')
+const battleResultDetail = ref('')
 
 const normalizePokemonName = (name) => {
   if (!name) {
@@ -65,12 +66,13 @@ const calcDamage = ({ attackerData, defenderData, moveName }) => {
 
 const endBattle = (resultMessage) => {
   battleFinished.value = true
-  battleResult.value = resultMessage
+  turnOwner.value = 'finished'
+  battleResultDetail.value = resultMessage
   addLog(resultMessage)
 }
 
 const rivalCounterAttack = async () => {
-  if (battleFinished.value) {
+  if (battleFinished.value || turnOwner.value !== 'rival') {
     return
   }
 
@@ -88,26 +90,30 @@ const rivalCounterAttack = async () => {
   addLog(`${normalizePokemonName(rivalActivePokemon.value?.pokemonName)} usó ${normalizePokemonName(randomMove)} y causó ${damage} de daño.`)
 
   if (myCurrentHp.value <= 0) {
+    battleResultTitle.value = 'Perdiste'
     endBattle('Tu Pokémon se debilitó. El rival ganó esta batalla.')
-    waitingRival.value = false
     return
   }
-
-  waitingRival.value = false
 
   if (movesUsed.value >= maxMoves) {
     if (myCurrentHp.value === rivalCurrentHp.value) {
+      battleResultTitle.value = 'Empate'
       endBattle('Empate técnico después de 4 movimientos por turno.')
     } else if (myCurrentHp.value > rivalCurrentHp.value) {
+      battleResultTitle.value = 'Ganaste!!!!'
       endBattle('Ganaste por tener más vida restante tras 4 movimientos.')
     } else {
+      battleResultTitle.value = 'Perdiste'
       endBattle('El rival ganó por tener más vida restante tras 4 movimientos.')
     }
+    return
   }
+
+  turnOwner.value = 'player'
 }
 
 const useMove = async (moveName) => {
-  if (loading.value || waitingRival.value || battleFinished.value) {
+  if (loading.value || battleFinished.value || turnOwner.value !== 'player') {
     return
   }
 
@@ -115,7 +121,7 @@ const useMove = async (moveName) => {
     return
   }
 
-  waitingRival.value = true
+  turnOwner.value = 'rival'
   movesUsed.value += 1
 
   const damage = calcDamage({
@@ -128,8 +134,8 @@ const useMove = async (moveName) => {
   addLog(`${normalizePokemonName(myActivePokemon.value?.pokemonName)} usó ${normalizePokemonName(moveName)} y causó ${damage} de daño.`)
 
   if (rivalCurrentHp.value <= 0) {
+    battleResultTitle.value = 'Ganaste!!!!'
     endBattle('¡Ganaste! El Pokémon rival se debilitó.')
-    waitingRival.value = false
     return
   }
 
@@ -198,6 +204,9 @@ const initArena = async () => {
     rivalCurrentHp.value = rivalMaxHp.value
 
     myMoves.value = buildMoves(myActivePokemon.value, myData)
+    turnOwner.value = 'player'
+    battleResultTitle.value = ''
+    battleResultDetail.value = ''
 
     addLog('La batalla comenzó. Tienes 4 movimientos para derrotar al rival.')
   } catch (err) {
@@ -256,15 +265,18 @@ onMounted(() => {
             v-for="move in myMoves"
             :key="move"
             class="secondary"
-            :disabled="waitingRival || battleFinished || movesUsed >= maxMoves"
+            :disabled="turnOwner !== 'player' || battleFinished || movesUsed >= maxMoves"
             @click="useMove(move)"
           >
             {{ normalizePokemonName(move) }}
           </button>
         </div>
 
-        <p class="muted" v-if="waitingRival">El rival está preparando su ataque...</p>
-        <p class="ok" v-if="battleFinished">{{ battleResult }}</p>
+        <p class="muted" v-if="turnOwner === 'rival'">Turno del rival: esperando su ataque...</p>
+        <p class="ok" v-if="battleFinished" :class="{ 'result-lose': battleResultTitle === 'Perdiste', 'result-draw': battleResultTitle === 'Empate' }">
+          {{ battleResultTitle }}
+        </p>
+        <p class="muted" v-if="battleFinished">{{ battleResultDetail }}</p>
       </div>
 
       <div class="card" style="margin-top: 1rem">
@@ -348,5 +360,13 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.6rem;
+}
+
+.result-lose {
+  color: #b91c1c;
+}
+
+.result-draw {
+  color: #92400e;
 }
 </style>
