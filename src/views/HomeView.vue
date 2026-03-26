@@ -46,16 +46,26 @@ const loadFavorites = async () => {
 
 const isFavorite = (pokemonName) => Boolean(favoriteIdByName.value[pokemonName])
 
+const pokemonId = (pokemon) => {
+  if (pokemon?.id) {
+    return Number(pokemon.id) || 0
+  }
+
+  return Number((pokemon.url.match(/\/(\d+)\/?$/) || [])[1]) || 0
+}
+
 const pokemonImage = (pokemon) => {
-  const pokemonId = Number((pokemon.url.match(/\/(\d+)\/?$/) || [])[1]) || 0
-  if (!pokemonId) {
+  if (pokemon?.image) {
+    return pokemon.image
+  }
+
+  const id = pokemonId(pokemon)
+  if (!id) {
     return ''
   }
 
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`
 }
-
-const pokemonId = (pokemon) => Number((pokemon.url.match(/\/(\d+)\/?$/) || [])[1]) || 0
 
 const loadPokemon = async () => {
   state.loading = true
@@ -79,7 +89,7 @@ const toggleFavorite = async (pokemon) => {
       await api.deleteFavorite(favoriteId)
     } else {
       await api.createFavorite({
-        pokemonId: Number((pokemon.url.match(/\/(\d+)\/?$/) || [])[1]) || 0,
+        pokemonId: pokemonId(pokemon),
         pokemonName: pokemon.name,
       })
     }
