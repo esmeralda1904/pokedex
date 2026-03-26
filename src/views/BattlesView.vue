@@ -216,11 +216,11 @@ const openArena = (battleId) => {
   })
 }
 
-const deleteFinishedBattle = async (battleId) => {
+const deleteBattleRecord = async (battleId) => {
   error.value = ''
   ok.value = ''
 
-  const confirmed = window.confirm('¿Quieres eliminar esta batalla finalizada?')
+  const confirmed = window.confirm('¿Quieres eliminar esta batalla?')
 
   if (!confirmed) {
     return
@@ -284,6 +284,7 @@ onBeforeUnmount(() => {
   <section class="grid grid-2">
     <article class="card" v-for="battle in battles" :key="battle._id">
       <h3>Batalla</h3>
+      <p class="muted">ID: {{ battle._id }}</p>
       <p>{{ battle.user?.email }} vs {{ battle.opponent?.email }}</p>
       <p class="muted">Estado: <strong>{{ normalizeStatus(getBattleStatus(battle)) }}</strong></p>
 
@@ -319,14 +320,12 @@ onBeforeUnmount(() => {
           >
             {{ getBattleStatus(battle) === 'in_progress' ? 'Jugar' : 'Ver batalla' }}
           </button>
-          <button
-            v-if="getBattleStatus(battle) === 'finished'"
-            class="danger"
-            @click="deleteFinishedBattle(battle._id)"
-          >
-            Eliminar
-          </button>
+          <button class="danger" @click="deleteBattleRecord(battle._id)">Eliminar</button>
         </div>
+      </template>
+
+      <template v-if="getBattleStatus(battle) === 'pending' || getBattleStatus(battle) === 'accepted' || getBattleStatus(battle) === 'rejected'">
+        <button class="danger" @click="deleteBattleRecord(battle._id)">Eliminar</button>
       </template>
 
       <p class="muted">{{ battle.summary }}</p>

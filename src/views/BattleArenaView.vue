@@ -188,6 +188,7 @@ onBeforeUnmount(() => {
       <div class="arena-grid">
         <article class="pokemon-card">
           <h3>{{ normalizePokemonName(myActivePokemon?.pokemonName) }}</h3>
+          <p class="muted" v-if="myActivePokemon?.pokemonId">ID: #{{ myActivePokemon?.pokemonId }}</p>
           <p class="muted">Tu pokémon</p>
           <img :src="myPokemonData?.sprites?.front_default" alt="Tu pokémon" class="sprite" />
           <div class="hp-wrap">
@@ -200,6 +201,7 @@ onBeforeUnmount(() => {
 
         <article class="pokemon-card">
           <h3>{{ normalizePokemonName(rivalActivePokemon?.pokemonName) }}</h3>
+          <p class="muted" v-if="rivalActivePokemon?.pokemonId">ID: #{{ rivalActivePokemon?.pokemonId }}</p>
           <p class="muted">Pokémon rival</p>
           <img :src="rivalPokemonData?.sprites?.front_default" alt="Pokémon rival" class="sprite" />
           <div class="hp-wrap">
@@ -244,7 +246,7 @@ onBeforeUnmount(() => {
             <strong>Tu equipo:</strong>
             <ul>
               <li v-for="pokemon in (isUserChallenger ? (battle.team?.pokemons || []) : (battle.opponentTeam?.pokemons || []))" :key="`my-${pokemon.pokemonId}-${pokemon.pokemonName}`">
-                {{ normalizePokemonName(pokemon.pokemonName) }}
+                #{{ pokemon.pokemonId }} · {{ normalizePokemonName(pokemon.pokemonName) }}
               </li>
             </ul>
           </div>
@@ -252,7 +254,7 @@ onBeforeUnmount(() => {
             <strong>Equipo rival:</strong>
             <ul>
               <li v-for="pokemon in (isUserChallenger ? (battle.opponentTeam?.pokemons || []) : (battle.team?.pokemons || []))" :key="`rival-${pokemon.pokemonId}-${pokemon.pokemonName}`">
-                {{ normalizePokemonName(pokemon.pokemonName) }}
+                #{{ pokemon.pokemonId }} · {{ normalizePokemonName(pokemon.pokemonName) }}
               </li>
             </ul>
           </div>

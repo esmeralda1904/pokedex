@@ -55,6 +55,8 @@ const pokemonImage = (pokemon) => {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`
 }
 
+const pokemonId = (pokemon) => Number((pokemon.url.match(/\/(\d+)\/?$/) || [])[1]) || 0
+
 const loadPokemon = async () => {
   state.loading = true
   state.error = ''
@@ -154,6 +156,7 @@ onMounted(async () => {
     <section class="grid grid-3 pokemon-grid">
       <article class="card pokemon-card" v-for="pokemon in state.items" :key="pokemon.name">
         <h3 style="text-transform: capitalize">{{ pokemon.name }}</h3>
+        <p class="muted" v-if="pokemonId(pokemon)">ID: #{{ pokemonId(pokemon) }}</p>
         <img
           v-if="pokemonImage(pokemon)"
           class="list-pokemon-image"
