@@ -62,6 +62,24 @@ const urlBase64ToUint8Array = (base64String) => {
   return outputArray
 }
 
+const requestNotificationPermissionOnEntry = async () => {
+  if (!("Notification" in window)) {
+    return
+  }
+
+  if (Notification.permission !== 'default') {
+    return
+  }
+
+  showSyncBanner('Acepta que le llegue notificaciones', 7000)
+
+  try {
+    await Notification.requestPermission()
+  } catch (error) {
+    console.log('[App] Notification permission request failed:', error)
+  }
+}
+
 const setupPushSubscription = async () => {
   try {
     if (!authState.token || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
@@ -117,6 +135,7 @@ const setupPushSubscription = async () => {
 onMounted(() => {
   window.addEventListener('offline-request-queued', handleQueuedNotice)
   navigator.serviceWorker?.addEventListener('message', handleServiceWorkerMessage)
+  requestNotificationPermissionOnEntry()
   setupPushSubscription()
 })
 
