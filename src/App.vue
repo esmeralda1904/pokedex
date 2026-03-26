@@ -83,7 +83,7 @@ const setupPushSubscription = async () => {
       if (permission === 'default') {
         if (!waitingPermissionInteraction) {
           waitingPermissionInteraction = true
-          showSyncBanner('Toca la pantalla y acepta permisos para activar notificaciones push.', 6000)
+          showSyncBanner('Acepta que le llegue notificaciones de batallas y amigos', 8000)
 
           const askOnInteraction = async () => {
             window.removeEventListener('click', askOnInteraction)
