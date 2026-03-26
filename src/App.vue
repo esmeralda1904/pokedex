@@ -8,7 +8,6 @@ const router = useRouter()
 const isAuth = computed(() => Boolean(authState.token))
 const syncBanner = ref('')
 let syncBannerTimeout = null
-let waitingPermissionInteraction = false
 
 const closeSession = () => {
   logout()
@@ -81,23 +80,11 @@ const setupPushSubscription = async () => {
       const permission = Notification.permission
 
       if (permission === 'default') {
-        if (!waitingPermissionInteraction) {
-          waitingPermissionInteraction = true
-          showSyncBanner('Acepta que le llegue notificaciones de batallas y amigos', 8000)
+        showSyncBanner('Acepta que le llegue notificaciones', 7000)
 
-          const askOnInteraction = async () => {
-            window.removeEventListener('click', askOnInteraction)
-            window.removeEventListener('touchstart', askOnInteraction)
-            waitingPermissionInteraction = false
-
-            const nextPermission = await Notification.requestPermission()
-            if (nextPermission === 'granted') {
-              await setupPushSubscription()
-            }
-          }
-
-          window.addEventListener('click', askOnInteraction, { once: true })
-          window.addEventListener('touchstart', askOnInteraction, { once: true })
+        const nextPermission = await Notification.requestPermission()
+        if (nextPermission === 'granted') {
+          await setupPushSubscription()
         }
 
         return
@@ -181,8 +168,8 @@ watch(
 .sync-banner {
   margin-bottom: 0.9rem;
   border-left: 5px solid var(--blue-main);
-  background: var(--green-soft);
-  color: #0b6b31;
+  background: #eaf6ff;
+  color: #0b3f6b;
   font-weight: 600;
 }
 </style>
