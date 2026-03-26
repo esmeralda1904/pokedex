@@ -6,7 +6,20 @@ import { authState } from '../stores/auth'
 
 const filters = reactive({
   name: '',
+  type1: '',
+  type2: '',
+  region: '',
 })
+
+const pokemonTypes = [
+  'normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison',
+  'ground', 'flying', 'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark',
+  'steel', 'fairy',
+]
+
+const pokemonRegions = [
+  'kanto', 'johto', 'hoenn', 'sinnoh', 'unova', 'kalos', 'alola', 'galar', 'paldea',
+]
 
 const state = reactive({
   items: [],
@@ -82,6 +95,15 @@ const applyFilters = async () => {
   await loadPokemon()
 }
 
+const clearFilters = async () => {
+  filters.name = ''
+  filters.type1 = ''
+  filters.type2 = ''
+  filters.region = ''
+  state.offset = 0
+  await loadPokemon()
+}
+
 const nextPage = async () => {
   state.offset += state.limit
   await loadPokemon()
@@ -105,7 +127,26 @@ onMounted(async () => {
 
       <div class="form-row">
         <input v-model="filters.name" placeholder="Buscar solo por nombre" />
+        <select v-model="filters.type1">
+          <option value="">Tipo 1</option>
+          <option v-for="type in pokemonTypes" :key="`type1-${type}`" :value="type">
+            {{ type }}
+          </option>
+        </select>
+        <select v-model="filters.type2">
+          <option value="">Tipo 2</option>
+          <option v-for="type in pokemonTypes" :key="`type2-${type}`" :value="type">
+            {{ type }}
+          </option>
+        </select>
+        <select v-model="filters.region">
+          <option value="">Región</option>
+          <option v-for="region in pokemonRegions" :key="`region-${region}`" :value="region">
+            {{ region }}
+          </option>
+        </select>
         <button @click="applyFilters">Buscar</button>
+        <button class="secondary" @click="clearFilters">Limpiar</button>
       </div>
       <p class="error" v-if="state.error">{{ state.error }}</p>
     </section>

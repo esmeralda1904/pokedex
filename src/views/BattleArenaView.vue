@@ -31,6 +31,25 @@ const toPercent = (current, max) => Math.max(0, Math.min(100, Math.round((curren
 const myId = computed(() => String(authState.user?._id || ''))
 const isUserChallenger = computed(() => String(battle.value?.user?._id || battle.value?.user || '') === myId.value)
 const myTurn = computed(() => String(battle.value?.turnUser || '') === myId.value)
+const myMoveSubmitted = computed(() => {
+  if (!battle.value) {
+    return false
+  }
+
+  return isUserChallenger.value
+    ? Boolean(battle.value.pendingMoves?.user)
+    : Boolean(battle.value.pendingMoves?.opponent)
+})
+
+const rivalMoveSubmitted = computed(() => {
+  if (!battle.value) {
+    return false
+  }
+
+  return isUserChallenger.value
+    ? Boolean(battle.value.pendingMoves?.opponent)
+    : Boolean(battle.value.pendingMoves?.user)
+})
 
 const myHp = computed(() => (isUserChallenger.value ? battle.value?.userHp : battle.value?.opponentHp) || 0)
 const myMaxHp = computed(() => (isUserChallenger.value ? battle.value?.userMaxHp : battle.value?.opponentMaxHp) || 1)
@@ -121,7 +140,7 @@ const loadBattle = async (silent = false) => {
 }
 
 const useMove = async (moveName) => {
-  if (!battle.value || battle.value.status !== 'in_progress' || !myTurn.value || actionLoading.value) {
+  if (!battle.value || battle.value.status !== 'in_progress' || myMoveSubmitted.value || actionLoading.value) {
     return
   }
 
@@ -164,6 +183,7 @@ onBeforeUnmount(() => {
 
     <template v-else-if="battle">
       <p class="muted">Estado: <strong>{{ battle.status }}</strong></p>
+      <p class="muted">Ronda actual: <strong>{{ battle.roundNumber || 1 }}</strong></p>
 
       <div class="arena-grid">
         <article class="pokemon-card">
@@ -198,15 +218,16 @@ onBeforeUnmount(() => {
             v-for="move in availableMoves"
             :key="move"
             class="secondary"
-            :disabled="!myTurn || actionLoading"
+            :disabled="myMoveSubmitted || actionLoading"
             @click="useMove(move)"
           >
             {{ normalizePokemonName(move) }}
           </button>
         </div>
 
-        <p class="muted" v-if="myTurn">Tu turno: elige un movimiento.</p>
-        <p class="muted" v-else>Turno del rival: esperando su ataque...</p>
+        <p class="muted" v-if="!myMoveSubmitted">Elige tu movimiento para esta ronda.</p>
+        <p class="muted" v-else-if="myMoveSubmitted && !rivalMoveSubmitted">Movimiento enviado. Esperando al rival...</p>
+        <p class="muted" v-else>Ambos movimientos listos. Resolviendo ronda...</p>
       </div>
 
       <div class="card" style="margin-top: 1rem" v-if="battle.status === 'finished'">
