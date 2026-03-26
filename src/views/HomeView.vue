@@ -133,9 +133,9 @@ onMounted(async () => {
 
 <template>
   <div class="view-stack">
-    <section class="card">
-      <h2>Explorar Pokémon</h2>
-      <p class="muted">Tu código de amigo: <strong>{{ authState.user?.friendCode }}</strong></p>
+    <section class="card explore-panel">
+      <h2 class="explore-title">Explorar Pokémon</h2>
+      <p class="muted explore-subtitle">Tu código de amigo: <strong>{{ authState.user?.friendCode }}</strong></p>
 
       <div class="form-row">
         <input v-model="filters.name" placeholder="Buscar solo por nombre" />
@@ -173,8 +173,8 @@ onMounted(async () => {
           :src="pokemonImage(pokemon)"
           :alt="pokemon.name"
         />
-        <div class="inline">
-          <RouterLink :to="`/pokemon/${pokemon.name}`">Ver detalles</RouterLink>
+        <div class="pokemon-actions">
+          <RouterLink class="detail-link" :to="`/pokemon/${pokemon.name}`">Ver detalles</RouterLink>
           <button
             class="star-btn"
             :class="{ active: isFavorite(pokemon.name) }"
@@ -199,3 +199,123 @@ onMounted(async () => {
     <p v-if="state.loading">Cargando...</p>
   </div>
 </template>
+
+<style scoped>
+.explore-panel {
+  position: relative;
+  overflow: hidden;
+  border-color: #7fd9f8;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(18, 194, 233, 0.2), transparent 40%),
+    radial-gradient(circle at 90% 95%, rgba(9, 210, 184, 0.14), transparent 35%),
+    var(--white);
+}
+
+.explore-title {
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.2px;
+}
+
+.explore-subtitle {
+  margin-bottom: 0.95rem;
+}
+
+.pokemon-card {
+  position: relative;
+  text-align: center;
+  padding-bottom: 3.2rem;
+  transition: transform 180ms ease, box-shadow 220ms ease;
+}
+
+.pokemon-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px rgba(13, 110, 253, 0.12);
+}
+
+.pokemon-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.detail-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid #8ecff3;
+  background: #eef8ff;
+  color: #0b4fc0;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  animation: detail-fade-in 300ms ease;
+}
+
+.detail-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 14px rgba(13, 110, 253, 0.16);
+  background: #e4f3ff;
+}
+
+.star-btn {
+  position: absolute;
+  right: 0.9rem;
+  bottom: 0.85rem;
+  width: 46px;
+  height: 46px;
+  font-size: 1.35rem;
+  box-shadow: 0 8px 16px rgba(13, 110, 253, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.star-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 12px 18px rgba(13, 110, 253, 0.18);
+}
+
+.star-btn.active {
+  animation: favorite-pop 0.35s ease-out, star-glow 0.45s ease-out;
+}
+
+@keyframes detail-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes star-glow {
+  0% {
+    box-shadow: 0 0 0 rgba(122, 75, 194, 0.25);
+  }
+  60% {
+    box-shadow: 0 0 0 8px rgba(122, 75, 194, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(122, 75, 194, 0);
+  }
+}
+
+@media (max-width: 640px) {
+  .pokemon-card {
+    padding-bottom: 3.4rem;
+  }
+
+  .detail-link {
+    font-size: 0.88rem;
+    padding: 0.45rem 0.8rem;
+  }
+
+  .star-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+</style>
