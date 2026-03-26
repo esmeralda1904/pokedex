@@ -17,7 +17,8 @@ const notifyClients = async (message) => {
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/assets/index.css',
+  '/manifest.json',
+  '/favicon.ico',
 ];
 
 const isApiRequest = (url) => url.includes('/api/');

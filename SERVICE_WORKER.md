@@ -2,15 +2,16 @@
 
 ## Componentes implementados
 
-### 1. **APP SHELL Cache** (`pokedex-v1-app-shell`)
+### 1. **APP SHELL Cache** (`pokedex-v2-app-shell`)
 Cachea rutas fijas y esenciales de la aplicación:
 - `/` (index)
 - `/index.html`
-- `/assets/index.css`
+- `/manifest.json`
+- `/favicon.ico`
 
 Se cachean al instalar el Service Worker.
 
-### 2. **Dynamic Cache** (`pokedex-v1-dynamic`)
+### 2. **Dynamic Cache** (`pokedex-v2-dynamic`)
 Almacena recursos solicitados dinámicamente:
 - Archivos JS del bundle
 - Imágenes y assets descargados
@@ -18,7 +19,7 @@ Almacena recursos solicitados dinámicamente:
 
 Se cachean bajo demanda cuando se descargan correctamente.
 
-### 3. **API Cache** (`pokedex-v1-api`)
+### 3. **API Cache** (`pokedex-v2-api`)
 Cachea respuestas de peticiones API:
 - `/api/pokemon`
 - `/api/favorites`
