@@ -9,6 +9,7 @@ import FavoritesView from '../views/FavoritesView.vue'
 import TeamsView from '../views/TeamsView.vue'
 import FriendsView from '../views/FriendsView.vue'
 import BattlesView from '../views/BattlesView.vue'
+import BattleArenaView from '../views/BattleArenaView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,6 +22,7 @@ const router = createRouter({
     { path: '/teams', component: TeamsView, meta: { auth: true } },
     { path: '/friends', component: FriendsView, meta: { auth: true } },
     { path: '/battles', component: BattlesView, meta: { auth: true } },
+    { path: '/battles/arena', component: BattleArenaView, meta: { auth: true } },
   ],
 })
 

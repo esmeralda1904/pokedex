@@ -1,6 +1,9 @@
 <script setup>
 import { onMounted, onBeforeUnmount, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { api } from '../services/api'
+
+const router = useRouter()
 
 const friends = ref([])
 const myTeams = ref([])
@@ -68,9 +71,19 @@ const createBattle = async () => {
   error.value = ''
   ok.value = ''
   try {
-    await api.createBattle(form)
+    const createdBattle = await api.createBattle(form)
     ok.value = 'Batalla registrada'
     await loadBattles()
+
+    router.push({
+      path: '/battles/arena',
+      query: {
+        friendId: form.friendId,
+        teamId: form.teamId,
+        opponentTeamId: form.opponentTeamId,
+        battleId: createdBattle?._id || '',
+      },
+    })
   } catch (err) {
     error.value = err.message
   }
