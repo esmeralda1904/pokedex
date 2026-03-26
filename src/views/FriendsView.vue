@@ -151,6 +151,10 @@ onBeforeUnmount(() => {
       <h3>{{ friend.email }}</h3>
       <p>Código: {{ friend.friendCode }}</p>
       <p class="muted">ID: {{ friend._id }}</p>
+      <p class="muted">Favoritos: {{ friend.favorites?.length || 0 }}</p>
+      <p class="muted" v-if="friend.favorites?.length">
+        {{ friend.favorites.slice(0, 5).map((fav) => `#${fav.pokemonId} ${fav.pokemonName}`).join(', ') }}
+      </p>
       <button class="danger friend-action-btn" @click="deleteFriend(friend._id)">Eliminar amigo</button>
     </article>
   </section>
