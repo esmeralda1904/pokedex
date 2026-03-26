@@ -1,223 +1,154 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../services/api'
+import { authState } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 
 const loading = ref(true)
+const actionLoading = ref(false)
 const error = ref('')
-const log = ref([])
-
-const myTeam = ref(null)
-const rivalTeam = ref(null)
-const myActivePokemon = ref(null)
-const rivalActivePokemon = ref(null)
+const battle = ref(null)
 const myPokemonData = ref(null)
 const rivalPokemonData = ref(null)
-
-const myCurrentHp = ref(0)
-const rivalCurrentHp = ref(0)
-const myMaxHp = ref(1)
-const rivalMaxHp = ref(1)
-
-const myMoves = ref([])
-const movesUsed = ref(0)
-const maxMoves = 4
-const turnOwner = ref('player')
-const battleFinished = ref(false)
-const battleResultTitle = ref('')
-const battleResultDetail = ref('')
+let refreshInterval = null
 
 const normalizePokemonName = (name) => {
   if (!name) {
     return 'Pokémon'
   }
 
-  return name
+  return String(name)
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
 }
 
-const getStatValue = (pokemonData, statName, fallback) => {
-  const stat = pokemonData?.stats?.find((item) => item.stat?.name === statName)
-  return stat?.base_stat || fallback
-}
+const toPercent = (current, max) => Math.max(0, Math.min(100, Math.round((current / Math.max(1, max)) * 100)))
 
-const toPercent = (current, max) => Math.max(0, Math.min(100, Math.round((current / max) * 100)))
+const myId = computed(() => String(authState.user?._id || ''))
+const isUserChallenger = computed(() => String(battle.value?.user?._id || battle.value?.user || '') === myId.value)
+const myTurn = computed(() => String(battle.value?.turnUser || '') === myId.value)
 
-const myHpPercent = computed(() => toPercent(myCurrentHp.value, myMaxHp.value))
-const rivalHpPercent = computed(() => toPercent(rivalCurrentHp.value, rivalMaxHp.value))
+const myHp = computed(() => (isUserChallenger.value ? battle.value?.userHp : battle.value?.opponentHp) || 0)
+const myMaxHp = computed(() => (isUserChallenger.value ? battle.value?.userMaxHp : battle.value?.opponentMaxHp) || 1)
+const rivalHp = computed(() => (isUserChallenger.value ? battle.value?.opponentHp : battle.value?.userHp) || 0)
+const rivalMaxHp = computed(() => (isUserChallenger.value ? battle.value?.opponentMaxHp : battle.value?.userMaxHp) || 1)
 
-const addLog = (message) => {
-  log.value.unshift(`${new Date().toLocaleTimeString()} · ${message}`)
-}
+const myHpPercent = computed(() => toPercent(myHp.value, myMaxHp.value))
+const rivalHpPercent = computed(() => toPercent(rivalHp.value, rivalMaxHp.value))
 
-const calcDamage = ({ attackerData, defenderData, moveName }) => {
-  const attack = getStatValue(attackerData, 'attack', 60)
-  const defense = getStatValue(defenderData, 'defense', 60)
-  const base = Math.max(8, Math.round((attack / Math.max(30, defense)) * 14))
-  const randomBonus = Math.floor(Math.random() * 9)
-  const moveBonus = Math.min(8, (moveName || '').length % 9)
-  return base + randomBonus + moveBonus
-}
+const myActivePokemon = computed(() => {
+  if (!battle.value) {
+    return null
+  }
 
-const endBattle = (resultMessage) => {
-  battleFinished.value = true
-  turnOwner.value = 'finished'
-  battleResultDetail.value = resultMessage
-  addLog(resultMessage)
-}
+  return isUserChallenger.value ? battle.value.userActivePokemon : battle.value.opponentActivePokemon
+})
 
-const rivalCounterAttack = async () => {
-  if (battleFinished.value || turnOwner.value !== 'rival') {
+const rivalActivePokemon = computed(() => {
+  if (!battle.value) {
+    return null
+  }
+
+  return isUserChallenger.value ? battle.value.opponentActivePokemon : battle.value.userActivePokemon
+})
+
+const availableMoves = computed(() => {
+  const moves = myActivePokemon.value?.moves || []
+
+  if (moves.length > 0) {
+    return moves
+  }
+
+  return ['ataque rápido', 'placaje', 'mordida', 'golpe cabeza']
+})
+
+const battleResult = computed(() => {
+  if (battle.value?.status !== 'finished') {
+    return ''
+  }
+
+  const winnerId = String(battle.value?.winner?._id || battle.value?.winner || '')
+
+  if (!winnerId) {
+    return 'Empate'
+  }
+
+  return winnerId === myId.value ? 'Ganaste!!!!' : 'Perdiste'
+})
+
+const syncBattleSprites = async () => {
+  if (!myActivePokemon.value || !rivalActivePokemon.value) {
+    myPokemonData.value = null
+    rivalPokemonData.value = null
     return
   }
 
-  const randomMove = myMoves.value.length
-    ? myMoves.value[Math.floor(Math.random() * myMoves.value.length)]
-    : 'ataque rápido'
+  const [myData, rivalData] = await Promise.all([
+    api.getPokemonDetail(myActivePokemon.value.pokemonId || myActivePokemon.value.pokemonName),
+    api.getPokemonDetail(rivalActivePokemon.value.pokemonId || rivalActivePokemon.value.pokemonName),
+  ])
 
-  const damage = calcDamage({
-    attackerData: rivalPokemonData.value,
-    defenderData: myPokemonData.value,
-    moveName: randomMove,
-  })
-
-  myCurrentHp.value = Math.max(0, myCurrentHp.value - damage)
-  addLog(`${normalizePokemonName(rivalActivePokemon.value?.pokemonName)} usó ${normalizePokemonName(randomMove)} y causó ${damage} de daño.`)
-
-  if (myCurrentHp.value <= 0) {
-    battleResultTitle.value = 'Perdiste'
-    endBattle('Tu Pokémon se debilitó. El rival ganó esta batalla.')
-    return
-  }
-
-  if (movesUsed.value >= maxMoves) {
-    if (myCurrentHp.value === rivalCurrentHp.value) {
-      battleResultTitle.value = 'Empate'
-      endBattle('Empate técnico después de 4 movimientos por turno.')
-    } else if (myCurrentHp.value > rivalCurrentHp.value) {
-      battleResultTitle.value = 'Ganaste!!!!'
-      endBattle('Ganaste por tener más vida restante tras 4 movimientos.')
-    } else {
-      battleResultTitle.value = 'Perdiste'
-      endBattle('El rival ganó por tener más vida restante tras 4 movimientos.')
-    }
-    return
-  }
-
-  turnOwner.value = 'player'
+  myPokemonData.value = myData
+  rivalPokemonData.value = rivalData
 }
 
-const useMove = async (moveName) => {
-  if (loading.value || battleFinished.value || turnOwner.value !== 'player') {
+const loadBattle = async (silent = false) => {
+  const battleId = String(route.query.battleId || '').trim()
+
+  if (!battleId) {
+    error.value = 'Falta battleId para abrir la arena.'
     return
   }
 
-  if (movesUsed.value >= maxMoves) {
-    return
+  if (!silent) {
+    loading.value = true
   }
-
-  turnOwner.value = 'rival'
-  movesUsed.value += 1
-
-  const damage = calcDamage({
-    attackerData: myPokemonData.value,
-    defenderData: rivalPokemonData.value,
-    moveName,
-  })
-
-  rivalCurrentHp.value = Math.max(0, rivalCurrentHp.value - damage)
-  addLog(`${normalizePokemonName(myActivePokemon.value?.pokemonName)} usó ${normalizePokemonName(moveName)} y causó ${damage} de daño.`)
-
-  if (rivalCurrentHp.value <= 0) {
-    battleResultTitle.value = 'Ganaste!!!!'
-    endBattle('¡Ganaste! El Pokémon rival se debilitó.')
-    return
-  }
-
-  window.setTimeout(() => {
-    rivalCounterAttack()
-  }, 900)
-}
-
-const buildMoves = (teamPokemon, pokemonData) => {
-  const fromTeam = Array.isArray(teamPokemon?.moves) ? teamPokemon.moves.filter(Boolean) : []
-
-  if (fromTeam.length > 0) {
-    return fromTeam.slice(0, 4)
-  }
-
-  const fromApi = Array.isArray(pokemonData?.moves)
-    ? pokemonData.moves.slice(0, 4).map((item) => item.move?.name).filter(Boolean)
-    : []
-
-  return fromApi.length > 0 ? fromApi : ['ataque rápido', 'placaje', 'mordida', 'golpe cabeza']
-}
-
-const initArena = async () => {
-  loading.value = true
-  error.value = ''
 
   try {
-    const friendId = String(route.query.friendId || '').trim()
-    const teamId = String(route.query.teamId || '').trim()
-    const opponentTeamId = String(route.query.opponentTeamId || '').trim()
-
-    if (!friendId || !teamId || !opponentTeamId) {
-      throw new Error('Faltan datos para abrir la arena. Inicia la batalla desde el formulario.')
-    }
-
-    const [myTeams, rivalTeams] = await Promise.all([
-      api.listTeams(),
-      api.listFriendTeams(friendId),
-    ])
-
-    myTeam.value = myTeams.find((team) => team._id === teamId) || null
-    rivalTeam.value = rivalTeams.find((team) => team._id === opponentTeamId) || null
-
-    if (!myTeam.value || !rivalTeam.value) {
-      throw new Error('No se pudieron cargar los equipos seleccionados.')
-    }
-
-    myActivePokemon.value = myTeam.value.pokemons?.[0] || null
-    rivalActivePokemon.value = rivalTeam.value.pokemons?.[0] || null
-
-    if (!myActivePokemon.value || !rivalActivePokemon.value) {
-      throw new Error('Ambos equipos deben tener al menos un pokémon para pelear.')
-    }
-
-    const [myData, rivalData] = await Promise.all([
-      api.getPokemonDetail(myActivePokemon.value.pokemonId || myActivePokemon.value.pokemonName),
-      api.getPokemonDetail(rivalActivePokemon.value.pokemonId || rivalActivePokemon.value.pokemonName),
-    ])
-
-    myPokemonData.value = myData
-    rivalPokemonData.value = rivalData
-
-    myMaxHp.value = Math.max(60, getStatValue(myData, 'hp', 60) * 2)
-    rivalMaxHp.value = Math.max(60, getStatValue(rivalData, 'hp', 60) * 2)
-    myCurrentHp.value = myMaxHp.value
-    rivalCurrentHp.value = rivalMaxHp.value
-
-    myMoves.value = buildMoves(myActivePokemon.value, myData)
-    turnOwner.value = 'player'
-    battleResultTitle.value = ''
-    battleResultDetail.value = ''
-
-    addLog('La batalla comenzó. Tienes 4 movimientos para derrotar al rival.')
+    const battleData = await api.getBattle(battleId)
+    battle.value = battleData
+    await syncBattleSprites()
+    error.value = ''
   } catch (err) {
-    error.value = err.message || 'No se pudo iniciar la batalla interactiva.'
+    error.value = err.message || 'No se pudo cargar la batalla.'
   } finally {
     loading.value = false
   }
 }
 
+const useMove = async (moveName) => {
+  if (!battle.value || battle.value.status !== 'in_progress' || !myTurn.value || actionLoading.value) {
+    return
+  }
+
+  actionLoading.value = true
+  error.value = ''
+
+  try {
+    const updated = await api.performBattleMove(battle.value._id, { moveName })
+    battle.value = updated
+    await syncBattleSprites()
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    actionLoading.value = false
+  }
+}
+
 onMounted(() => {
-  initArena()
+  loadBattle()
+  refreshInterval = window.setInterval(() => loadBattle(true), 3000)
+})
+
+onBeforeUnmount(() => {
+  if (refreshInterval) {
+    window.clearInterval(refreshInterval)
+    refreshInterval = null
+  }
 })
 </script>
 
@@ -231,14 +162,16 @@ onMounted(() => {
     <p class="error" v-if="error">{{ error }}</p>
     <p class="muted" v-else-if="loading">Cargando arena...</p>
 
-    <template v-else>
+    <template v-else-if="battle">
+      <p class="muted">Estado: <strong>{{ battle.status }}</strong></p>
+
       <div class="arena-grid">
         <article class="pokemon-card">
-          <h3>{{ normalizePokemonName(myActivePokemon?.nickname || myActivePokemon?.pokemonName) }}</h3>
+          <h3>{{ normalizePokemonName(myActivePokemon?.pokemonName) }}</h3>
           <p class="muted">Tu pokémon</p>
           <img :src="myPokemonData?.sprites?.front_default" alt="Tu pokémon" class="sprite" />
           <div class="hp-wrap">
-            <span>HP {{ myCurrentHp }} / {{ myMaxHp }}</span>
+            <span>HP {{ myHp }} / {{ myMaxHp }}</span>
             <div class="hp-bar-bg">
               <div class="hp-bar" :style="{ width: `${myHpPercent}%` }"></div>
             </div>
@@ -246,11 +179,11 @@ onMounted(() => {
         </article>
 
         <article class="pokemon-card">
-          <h3>{{ normalizePokemonName(rivalActivePokemon?.nickname || rivalActivePokemon?.pokemonName) }}</h3>
+          <h3>{{ normalizePokemonName(rivalActivePokemon?.pokemonName) }}</h3>
           <p class="muted">Pokémon rival</p>
           <img :src="rivalPokemonData?.sprites?.front_default" alt="Pokémon rival" class="sprite" />
           <div class="hp-wrap">
-            <span>HP {{ rivalCurrentHp }} / {{ rivalMaxHp }}</span>
+            <span>HP {{ rivalHp }} / {{ rivalMaxHp }}</span>
             <div class="hp-bar-bg">
               <div class="hp-bar danger" :style="{ width: `${rivalHpPercent}%` }"></div>
             </div>
@@ -258,25 +191,29 @@ onMounted(() => {
         </article>
       </div>
 
-      <div class="card" style="margin-top: 1rem">
-        <h3 style="margin-top: 0">Movimientos ({{ movesUsed }}/{{ maxMoves }})</h3>
+      <div class="card" style="margin-top: 1rem" v-if="battle.status === 'in_progress'">
+        <h3 style="margin-top: 0">Movimientos</h3>
         <div class="moves-grid">
           <button
-            v-for="move in myMoves"
+            v-for="move in availableMoves"
             :key="move"
             class="secondary"
-            :disabled="turnOwner !== 'player' || battleFinished || movesUsed >= maxMoves"
+            :disabled="!myTurn || actionLoading"
             @click="useMove(move)"
           >
             {{ normalizePokemonName(move) }}
           </button>
         </div>
 
-        <p class="muted" v-if="turnOwner === 'rival'">Turno del rival: esperando su ataque...</p>
-        <p class="ok" v-if="battleFinished" :class="{ 'result-lose': battleResultTitle === 'Perdiste', 'result-draw': battleResultTitle === 'Empate' }">
-          {{ battleResultTitle }}
+        <p class="muted" v-if="myTurn">Tu turno: elige un movimiento.</p>
+        <p class="muted" v-else>Turno del rival: esperando su ataque...</p>
+      </div>
+
+      <div class="card" style="margin-top: 1rem" v-if="battle.status === 'finished'">
+        <p class="ok" :class="{ 'result-lose': battleResult === 'Perdiste', 'result-draw': battleResult === 'Empate' }">
+          {{ battleResult }}
         </p>
-        <p class="muted" v-if="battleFinished">{{ battleResultDetail }}</p>
+        <p class="muted">{{ battle.summary }}</p>
       </div>
 
       <div class="card" style="margin-top: 1rem">
@@ -285,16 +222,16 @@ onMounted(() => {
           <div>
             <strong>Tu equipo:</strong>
             <ul>
-              <li v-for="pokemon in myTeam?.pokemons || []" :key="`my-${pokemon.pokemonId}-${pokemon.pokemonName}`">
-                {{ normalizePokemonName(pokemon.nickname || pokemon.pokemonName) }}
+              <li v-for="pokemon in (isUserChallenger ? (battle.team?.pokemons || []) : (battle.opponentTeam?.pokemons || []))" :key="`my-${pokemon.pokemonId}-${pokemon.pokemonName}`">
+                {{ normalizePokemonName(pokemon.pokemonName) }}
               </li>
             </ul>
           </div>
           <div>
             <strong>Equipo rival:</strong>
             <ul>
-              <li v-for="pokemon in rivalTeam?.pokemons || []" :key="`rival-${pokemon.pokemonId}-${pokemon.pokemonName}`">
-                {{ normalizePokemonName(pokemon.nickname || pokemon.pokemonName) }}
+              <li v-for="pokemon in (isUserChallenger ? (battle.opponentTeam?.pokemons || []) : (battle.team?.pokemons || []))" :key="`rival-${pokemon.pokemonId}-${pokemon.pokemonName}`">
+                {{ normalizePokemonName(pokemon.pokemonName) }}
               </li>
             </ul>
           </div>
@@ -304,7 +241,7 @@ onMounted(() => {
       <div class="card" style="margin-top: 1rem">
         <h3 style="margin-top: 0">Registro de turnos</h3>
         <ul>
-          <li v-for="(entry, index) in log" :key="`${entry}-${index}`">{{ entry }}</li>
+          <li v-for="(entry, index) in battle.battleLog || []" :key="`${entry}-${index}`">{{ entry }}</li>
         </ul>
       </div>
     </template>

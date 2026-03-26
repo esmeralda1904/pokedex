@@ -8,17 +8,15 @@ const router = useRouter()
 
 const friends = ref([])
 const myTeams = ref([])
-const enemyTeams = ref([])
 const battles = ref([])
 const error = ref('')
 const ok = ref('')
 let refreshInterval = null
+const selectedTeamByBattle = reactive({})
 
 const form = reactive({
   friendId: '',
   friendCode: '',
-  teamId: '',
-  opponentTeamId: '',
 })
 
 const loadBattles = async () => {
@@ -37,65 +35,28 @@ const loadData = async () => {
   }
 }
 
-const refreshEnemyTeams = async () => {
-  form.opponentTeamId = ''
-  enemyTeams.value = []
-  form.friendCode = ''
-  if (!form.friendId) {
-    return
+const normalizeStatus = (status) => {
+  const map = {
+    pending: 'Pendiente',
+    accepted: 'Aceptada',
+    in_progress: 'En progreso',
+    finished: 'Finalizada',
+    rejected: 'Rechazada',
   }
 
-  enemyTeams.value = await api.listFriendTeams(form.friendId)
-}
-
-const loadEnemyTeamsByCode = async () => {
-  error.value = ''
-  ok.value = ''
-  form.opponentTeamId = ''
-  enemyTeams.value = []
-
-  if (!form.friendCode) {
-    return
-  }
-
-  try {
-    const data = await api.listFriendTeamsByCode(form.friendCode)
-    form.friendId = data.friend._id
-    enemyTeams.value = data.teams
-    ok.value = `Rival cargada: ${data.friend.email}`
-  } catch (err) {
-    error.value = err.message
-  }
-}
-
-const createBattle = async () => {
-  error.value = ''
-  ok.value = ''
-  try {
-    const createdBattle = await api.createBattle(form)
-    ok.value = 'Batalla registrada'
-    await loadBattles()
-
-    router.push({
-      path: '/battles/arena',
-      query: {
-        friendId: form.friendId,
-        teamId: form.teamId,
-        opponentTeamId: form.opponentTeamId,
-        battleId: createdBattle?._id || '',
-      },
-    })
-  } catch (err) {
-    error.value = err.message
-  }
+  return map[status] || status
 }
 
 const battleResultLabel = (battle) => {
+  if (battle.status !== 'finished') {
+    return ''
+  }
+
   const winnerId = battle?.winner?._id || battle?.winner
   const myId = authState.user?._id
 
-  if (!winnerId || !myId) {
-    return 'Resultado pendiente'
+  if (!winnerId) {
+    return 'Empate'
   }
 
   return String(winnerId) === String(myId) ? 'Ganaste!!!!' : 'Perdiste'
@@ -112,7 +73,85 @@ const battleResultClass = (battle) => {
     return 'battle-result lose'
   }
 
+  if (result === 'Empate') {
+    return 'battle-result draw'
+  }
+
   return 'battle-result'
+}
+
+const isOpponent = (battle) => String(battle.opponent?._id) === String(authState.user?._id)
+
+const isMyTeamMissing = (battle) => {
+  if (String(battle.user?._id) === String(authState.user?._id)) {
+    return !battle.team
+  }
+
+  return !battle.opponentTeam
+}
+
+const createChallenge = async () => {
+  error.value = ''
+  ok.value = ''
+
+  try {
+    await api.createBattleChallenge({
+      friendId: form.friendId || undefined,
+      friendCode: form.friendCode || undefined,
+    })
+
+    ok.value = 'Reto enviado. Esperando aceptación del rival.'
+    form.friendCode = ''
+    await loadBattles()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+const acceptBattle = async (battleId) => {
+  error.value = ''
+  ok.value = ''
+
+  try {
+    await api.acceptBattle(battleId)
+    ok.value = 'Reto aceptado. Seleccionen equipo para iniciar.'
+    await loadBattles()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+const selectTeam = async (battleId) => {
+  error.value = ''
+  ok.value = ''
+
+  const teamId = selectedTeamByBattle[battleId]
+
+  if (!teamId) {
+    error.value = 'Selecciona tu equipo primero.'
+    return
+  }
+
+  try {
+    const updatedBattle = await api.selectBattleTeam(battleId, { teamId })
+
+    if (updatedBattle.status === 'in_progress') {
+      ok.value = 'Equipos listos. Ya pueden pelear por turnos.'
+    } else {
+      ok.value = 'Equipo guardado. Esperando al rival.'
+    }
+
+    await loadBattles()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+const openArena = (battleId) => {
+  router.push({
+    path: '/battles/arena',
+    query: { battleId },
+  })
 }
 
 const handlePushRefresh = () => {
@@ -138,8 +177,8 @@ onBeforeUnmount(() => {
 <template>
   <section class="card" style="margin-bottom: 1rem">
     <h2>Batallas entre amigos</h2>
-    <form @submit.prevent="createBattle">
-      <select v-model="form.friendId" @change="refreshEnemyTeams" required>
+    <form @submit.prevent="createChallenge">
+      <select v-model="form.friendId">
         <option value="">Selecciona amigo</option>
         <option v-for="friend in friends" :key="friend._id" :value="friend._id">
           {{ friend.email }}
@@ -152,24 +191,11 @@ onBeforeUnmount(() => {
           placeholder="O usa código de jugadora"
           style="flex: 1"
         />
-        <button type="button" class="secondary" @click="loadEnemyTeamsByCode">
-          Cargar por código
-        </button>
       </div>
 
-      <select v-model="form.teamId" required>
-        <option value="">Tu equipo</option>
-        <option v-for="team in myTeams" :key="team._id" :value="team._id">{{ team.name }}</option>
-      </select>
-
-      <select v-model="form.opponentTeamId" required>
-        <option value="">Equipo de tu amigo</option>
-        <option v-for="team in enemyTeams" :key="team._id" :value="team._id">{{ team.name }}</option>
-      </select>
-
-      <button>Iniciar batalla</button>
+      <button>Enviar reto</button>
     </form>
-    <p class="muted">Puedes seleccionar amigo o cargar rival con su código de jugador.</p>
+    <p class="muted">Primero envías el reto. Si el rival acepta, ambos eligen equipo y empieza la batalla por turnos.</p>
     <p class="error" v-if="error">{{ error }}</p>
     <p class="ok" v-if="ok">{{ ok }}</p>
   </section>
@@ -178,8 +204,26 @@ onBeforeUnmount(() => {
     <article class="card" v-for="battle in battles" :key="battle._id">
       <h3>Batalla</h3>
       <p>{{ battle.user?.email }} vs {{ battle.opponent?.email }}</p>
-      <p>Puntaje: {{ battle.userScore }} - {{ battle.opponentScore }}</p>
-      <p :class="battleResultClass(battle)"><strong>{{ battleResultLabel(battle) }}</strong></p>
+      <p class="muted">Estado: <strong>{{ normalizeStatus(battle.status) }}</strong></p>
+
+      <template v-if="battle.status === 'pending' && isOpponent(battle)">
+        <button @click="acceptBattle(battle._id)">Aceptar reto</button>
+      </template>
+
+      <template v-if="battle.status === 'accepted' && isMyTeamMissing(battle)">
+        <select v-model="selectedTeamByBattle[battle._id]">
+          <option value="">Selecciona tu equipo</option>
+          <option v-for="team in myTeams" :key="team._id" :value="team._id">{{ team.name }}</option>
+        </select>
+        <button class="secondary" @click="selectTeam(battle._id)">Guardar equipo</button>
+      </template>
+
+      <template v-if="battle.status === 'in_progress' || battle.status === 'finished'">
+        <p class="muted">HP: {{ battle.userHp }} - {{ battle.opponentHp }}</p>
+        <p v-if="battle.status === 'finished'" :class="battleResultClass(battle)"><strong>{{ battleResultLabel(battle) }}</strong></p>
+        <button class="secondary" @click="openArena(battle._id)">Abrir batalla</button>
+      </template>
+
       <p class="muted">{{ battle.summary }}</p>
     </article>
   </section>
@@ -196,5 +240,9 @@ onBeforeUnmount(() => {
 
 .battle-result.lose {
   color: #b91c1c;
+}
+
+.battle-result.draw {
+  color: #92400e;
 }
 </style>
