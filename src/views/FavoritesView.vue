@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { api } from '../services/api'
 
 const favorites = ref([])
@@ -9,6 +9,9 @@ const ok = ref('')
 const imageByFavoriteId = reactive({})
 
 const formById = reactive({})
+const handleFavoritesUpdated = async () => {
+  await load()
+}
 
 const spriteUrlById = (pokemonId) =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`
@@ -80,7 +83,14 @@ const remove = async (id) => {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  window.addEventListener('favorites-updated', handleFavoritesUpdated)
+  load()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('favorites-updated', handleFavoritesUpdated)
+})
 </script>
 
 <template>

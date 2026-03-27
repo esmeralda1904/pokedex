@@ -22,6 +22,14 @@ const notifyQueuedRequest = (payload) => {
   )
 }
 
+const notifyFavoritesUpdated = (action, payload = null) => {
+  window.dispatchEvent(
+    new CustomEvent('favorites-updated', {
+      detail: { action, payload, at: Date.now() },
+    })
+  )
+}
+
 const request = async (path, options = {}) => {
   const headers = {
     'Content-Type': 'application/json',
@@ -74,9 +82,21 @@ export const api = {
   getPokemonDetail: (idOrName) => request(`/pokemon/${idOrName}`),
 
   listFavorites: () => request('/favorites'),
-  createFavorite: (payload) => request('/favorites', { method: 'POST', body: JSON.stringify(payload) }),
-  updateFavorite: (id, payload) => request(`/favorites/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
-  deleteFavorite: (id) => request(`/favorites/${id}`, { method: 'DELETE' }),
+  createFavorite: async (payload) => {
+    const created = await request('/favorites', { method: 'POST', body: JSON.stringify(payload) })
+    notifyFavoritesUpdated('create', created)
+    return created
+  },
+  updateFavorite: async (id, payload) => {
+    const updated = await request(`/favorites/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+    notifyFavoritesUpdated('update', updated)
+    return updated
+  },
+  deleteFavorite: async (id) => {
+    const removed = await request(`/favorites/${id}`, { method: 'DELETE' })
+    notifyFavoritesUpdated('delete', { id })
+    return removed
+  },
 
   listTeams: () => request('/teams'),
   listFriendTeams: (friendId) => request(`/teams/friend/${friendId}`),

@@ -9,6 +9,9 @@ const friendCode = ref('')
 const error = ref('')
 const ok = ref('')
 let refreshInterval = null
+const handleFavoritesUpdated = () => {
+  load()
+}
 
 const load = async () => {
   error.value = ''
@@ -98,11 +101,13 @@ const handlePushRefresh = () => {
 onMounted(() => {
   load()
   window.addEventListener('app-push-received', handlePushRefresh)
+  window.addEventListener('favorites-updated', handleFavoritesUpdated)
   refreshInterval = window.setInterval(load, 12000)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('app-push-received', handlePushRefresh)
+  window.removeEventListener('favorites-updated', handleFavoritesUpdated)
 
   if (refreshInterval) {
     window.clearInterval(refreshInterval)

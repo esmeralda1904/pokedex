@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { api } from '../services/api'
 import { authState } from '../stores/auth'
@@ -32,6 +32,9 @@ const state = reactive({
 
 const savingId = ref(null)
 const favoriteIdByName = ref({})
+const handleFavoritesUpdated = async () => {
+  await loadFavorites()
+}
 
 const rangeStart = () => (state.items.length ? state.offset + 1 : 0)
 const rangeEnd = () => (state.items.length ? state.offset + state.items.length : 0)
@@ -127,7 +130,12 @@ const prevPage = async () => {
 }
 
 onMounted(async () => {
+  window.addEventListener('favorites-updated', handleFavoritesUpdated)
   await Promise.all([loadPokemon(), loadFavorites()])
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('favorites-updated', handleFavoritesUpdated)
 })
 </script>
 

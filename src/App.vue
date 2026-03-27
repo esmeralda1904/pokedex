@@ -8,6 +8,7 @@ const router = useRouter()
 const isAuth = computed(() => Boolean(authState.token))
 const syncBanner = ref('')
 let syncBannerTimeout = null
+let notificationPromptInFlight = false
 
 const closeSession = () => {
   logout()
@@ -62,6 +63,9 @@ const urlBase64ToUint8Array = (base64String) => {
   return outputArray
 }
 
+const isPwaStandalone = () =>
+  window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator?.standalone === true
+
 const requestNotificationPermissionOnEntry = async () => {
   if (!("Notification" in window)) {
     return
@@ -71,12 +75,30 @@ const requestNotificationPermissionOnEntry = async () => {
     return
   }
 
-  showSyncBanner('Acepta que le llegue notificaciones', 7000)
+  if (notificationPromptInFlight) {
+    return
+  }
+
+  notificationPromptInFlight = true
+
+  showSyncBanner('Acepta que le llegue notificaciones', isPwaStandalone() ? 9000 : 7000)
 
   try {
-    await Notification.requestPermission()
+    const permission = await Notification.requestPermission()
+
+    if (permission === 'granted' && authState.token) {
+      await setupPushSubscription()
+    }
   } catch (error) {
     console.log('[App] Notification permission request failed:', error)
+  } finally {
+    notificationPromptInFlight = false
+  }
+}
+
+const handleAppVisible = () => {
+  if (document.visibilityState === 'visible') {
+    requestNotificationPermissionOnEntry()
   }
 }
 
@@ -96,17 +118,6 @@ const setupPushSubscription = async () => {
 
     if (!subscription) {
       const permission = Notification.permission
-
-      if (permission === 'default') {
-        showSyncBanner('Acepta que le llegue notificaciones', 7000)
-
-        const nextPermission = await Notification.requestPermission()
-        if (nextPermission === 'granted') {
-          await setupPushSubscription()
-        }
-
-        return
-      }
 
       if (permission !== 'granted') {
         return
@@ -134,6 +145,8 @@ const setupPushSubscription = async () => {
 
 onMounted(() => {
   window.addEventListener('offline-request-queued', handleQueuedNotice)
+  window.addEventListener('pageshow', requestNotificationPermissionOnEntry)
+  document.addEventListener('visibilitychange', handleAppVisible)
   navigator.serviceWorker?.addEventListener('message', handleServiceWorkerMessage)
   requestNotificationPermissionOnEntry()
   setupPushSubscription()
@@ -141,6 +154,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('offline-request-queued', handleQueuedNotice)
+  window.removeEventListener('pageshow', requestNotificationPermissionOnEntry)
+  document.removeEventListener('visibilitychange', handleAppVisible)
   navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerMessage)
 
   if (syncBannerTimeout) {
